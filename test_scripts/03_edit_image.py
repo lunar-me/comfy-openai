@@ -13,9 +13,11 @@ import sys
 
 import httpx
 
-BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000/v1")
-API_KEY = os.environ.get("API_KEY", "local-key")
-MODEL = os.environ.get("MODEL", "flux-edit")
+from _env import get_api_url, get_env
+
+BASE_URL = get_api_url("http://localhost:8000/v1")
+API_KEY = get_env("API_KEY", "local-key")
+MODEL = get_env("MODEL", "flux-edit")
 INPUT_IMAGE = sys.argv[1] if len(sys.argv) > 1 else "input.png"
 
 
