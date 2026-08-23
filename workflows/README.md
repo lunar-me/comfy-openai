@@ -5,10 +5,12 @@ OpenAI-compatible image model — **without changing any Python code**.
 
 ## Files
 
-| File            | Purpose                                                        |
-|-----------------|----------------------------------------------------------------|
-| `models.json`   | The **model registry** — maps a model name to a workflow + node map |
-| `*.json`        | ComfyUI **API-format** workflow files (e.g. `image_flux2_text_to_image_9b.json`) |
+| File                  | Purpose                                                        |
+|-----------------------|----------------------------------------------------------------|
+| `models.json`         | The **model registry** — maps a model name to a workflow + node map |
+| `guess_nodes.py`      | Helper script that auto-guesses node roles for a workflow      |
+| `models_guess.json`   | Auto-generated guesses (NOT read by the app)                   |
+| `*.json`              | ComfyUI **API-format** workflow files (e.g. `image_flux2_text_to_image_9b.json`) |
 
 ## How the model registry works
 
@@ -38,6 +40,41 @@ pass as `model` in an OpenAI request). Each entry describes:
 The app loads this file at request time (path configurable via
 `WORKFLOW_REGISTRY` in `.env`). Edit it and your models appear immediately —
 **no code, no restart required** (the registry is re-read per request).
+
+## Auto-guessing node roles with `guess_nodes.py`
+
+Instead of finding node IDs by hand, run the helper script on an **API-format**
+workflow and it will try to identify the nodes for `prompt`, `negative_prompt`,
+`seed`, `width`, `height`, `latent`, `steps`, and `cfg`:
+
+```bash
+python workflows/guess_nodes.py workflows/my_workflow.json
+```
+
+This writes **`workflows/models_guess.json`** with the guessed node IDs (plus
+alternative candidates and a per-role confidence score), and prints a summary:
+
+```text
+Wrote guesses to workflows/models_guess.json
+Guessed nodes:
+   prompt          -> 1:74
+   negative_prompt -> 1:67
+   seed            -> 1:73
+   width           -> 1:68
+   height          -> 1:69
+   latent          -> 1:66
+   steps           -> 1:62
+   cfg             -> 1:63
+```
+
+> **`models_guess.json` is NOT read by the app.** It is only a guide. Review
+> the guesses — especially any flagged with `?` (low confidence) — fix what's
+> wrong, then copy the `nodes` block into `models.json`.
+
+Heuristics used (same mapping as the table below): CLIP text encodes for
+prompts, `RandomNoise`/`noise_seed` for seed, `PrimitiveInt` (by title) for
+width/height, `Empty*LatentImage` for the latent, `*Scheduler`/`steps` for
+steps, and `CFGGuider`/`cfg` for cfg.
 
 ## Setting up a new workflow — step by step
 

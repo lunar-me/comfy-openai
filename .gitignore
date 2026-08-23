@@ -22,6 +22,10 @@ output/*
 Thumbs.db
 
 test.py
+book-illustrator/
+
+# Auto-generated node-role guesses (workflows/guess_nodes.py output)
+workflows/models_guess.json
 
 # Logs
 *.log
