@@ -27,13 +27,14 @@ class WorkflowAdapter:
     def build(
         self,
         prompt: str,
-        width: int,
-        height: int,
+        width: int | None = None,
+        height: int | None = None,
         seed: int | None = None,
         n: int = 1,
         negative_prompt: str | None = None,
         steps: int | None = None,
         cfg: float | None = None,
+        input_image: str | None = None,
     ) -> dict:
         workflow = self._load()
 
@@ -44,9 +45,15 @@ class WorkflowAdapter:
         if neg_node := self.node_map.get("negative_prompt"):
             workflow[neg_node]["inputs"]["text"] = negative_prompt or ""
 
-        # Width / height
-        workflow[self.node_map["width"]]["inputs"]["value"] = width
-        workflow[self.node_map["height"]]["inputs"]["value"] = height
+        # Width / height (optional; some workflows derive size from the input image)
+        if width is not None and (width_node := self.node_map.get("width")):
+            workflow[width_node]["inputs"]["value"] = width
+        if height is not None and (height_node := self.node_map.get("height")):
+            workflow[height_node]["inputs"]["value"] = height
+
+        # Input / reference image (img2img): LoadImage node expects its "image" input
+        if input_image is not None and (img_node := self.node_map.get("input_image")):
+            workflow[img_node]["inputs"]["image"] = input_image
 
         # Batch size
         workflow[self.node_map["latent"]]["inputs"]["batch_size"] = n

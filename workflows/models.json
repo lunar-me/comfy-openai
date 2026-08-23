@@ -13,5 +13,19 @@
     },
     "sizes": ["1024x1024", "512x512", "768x768"],
     "owned_by": "local"
+  },
+  "flux-edit": {
+    "workflow": "workflows/image_flux2_klein_image_edit_9b_base.json",
+    "nodes": {
+      "prompt": "75:74",
+      "negative_prompt": "75:67",
+      "input_image": "76",
+      "seed": "75:73",
+      "latent": "75:66",
+      "steps": "75:62",
+      "cfg": "75:63"
+    },
+    "sizes": [],
+    "owned_by": "local"
   }
 }

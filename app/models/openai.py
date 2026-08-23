@@ -16,6 +16,23 @@ class ImageGenerationRequest(BaseModel):
     cfg: float | None = None
 
 
+class ImageEditRequest(BaseModel):
+    """OpenAI-compatible images.edit request.
+
+    The image and mask are uploaded as multipart files. The mask is
+    optional — ComfyUI img2img workflows typically only need the image.
+    """
+    model: str
+    prompt: str
+    n: int = Field(default=1, ge=1, le=4)
+    size: str | None = None
+    response_format: Literal["url", "b64_json"] = "url"
+    seed: int | None = None
+    negative_prompt: str | None = None
+    steps: int | None = None
+    cfg: float | None = None
+
+
 class ImageData(BaseModel):
     url: str | None = None
     b64_json: str | None = None

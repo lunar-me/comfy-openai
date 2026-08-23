@@ -83,6 +83,7 @@ python -m pytest tests/ -v
 |--------|-------------------------|--------------------------------------|
 | GET    | `/v1/models`            | List available image models          |
 | POST   | `/v1/images/generations`| Generate an image (OpenAI-compatible)|
+| POST   | `/v1/images/edits`      | Edit an image (img2img, OpenAI-compatible)|
 | GET    | `/images/{file}`        | Serve a saved generated image        |
 
 ## Request example
@@ -111,6 +112,31 @@ image_url = response.data[0].url          # http://localhost:8000/images/<file>
 image_data = response.data[0].b64_json    # base64-encoded PNG bytes
 ```
 
+## Image edit example (img2img)
+
+`POST /v1/images/edits` accepts an input image (and optional mask) plus a
+prompt, uploads the image to ComfyUI, and runs the model's image-to-image
+workflow:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="local-key")
+
+response = client.images.edit(
+    model="flux-edit",
+    image=open("original_image.png", "rb"),
+    prompt="Add a realistic flamingo floating in the swimming pool",
+    n=1,
+)
+
+image_b64 = response.data[0].b64_json
+```
+
+The edit uses the `input_image` node of the img2img workflow (detected by
+`guess_nodes.py` and registered in `workflows/models.json`). `size` is
+optional — when omitted, the workflow derives dimensions from the input image.
+
 ## How it works
 
 1. `POST /v1/images/generations` validates the request.
@@ -128,7 +154,8 @@ The model registry lives in **`workflows/models.json`** — a config file, not c
 It maps model names to their workflow JSON and node map, so you can register any
 ComfyUI workflow **without changing Python code**.
 
-Only `flux` is registered out of the box:
+Two models ship out of the box — `flux` (text-to-image) and `flux-edit`
+(img2img). Example:
 
 ```json
 {

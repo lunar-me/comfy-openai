@@ -36,6 +36,37 @@ class ComfyClient:
         response.raise_for_status()
         return response.json()
 
+    async def upload_image(
+        self,
+        data: bytes,
+        filename: str,
+        overwrite: bool = False,
+        type: str = "input",
+        subfolder: str = "",
+    ) -> dict:
+        """Upload an input image to ComfyUI and return its reference info.
+
+        The returned dict has the form {"name": ..., "subfolder": ...,
+        "type": ...} which can be used as the filename for a LoadImage node.
+        """
+        files = {
+            "image": (filename, data, "image/png"),
+        }
+        data_form = {
+            "overwrite": str(overwrite).lower(),
+            "type": type,
+            "subfolder": subfolder,
+        }
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.base_url}/upload/image",
+                files=files,
+                data=data_form,
+            )
+        if response.status_code >= 400:
+            raise ComfyError(f"ComfyUI rejected image upload: {response.text}")
+        return response.json()
+
     async def get_image(self, filename: str, subfolder: str = "", type: str = "output") -> bytes:
         """Retrieve a generated image's raw bytes from ComfyUI."""
         params = {"filename": filename, "subfolder": subfolder, "type": type}
