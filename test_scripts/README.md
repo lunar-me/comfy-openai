@@ -17,9 +17,11 @@ API server over HTTP and prints the result.
 
 ## Configuration
 
-All scripts load the project-root `.env` file (if present) into the environment,
-then read settings via `os.environ.get(...)`. Real OS environment variables always
-take precedence over `.env` values. If neither is set, sensible defaults are used.
+All scripts load a `.env` file into the environment, then read settings via
+`os.environ.get(...)`. The script-local `.env` (i.e. `test_scripts/.env`) is
+preferred, with the project-root `.env` as a fallback. Real OS environment
+variables always take precedence over `.env` values. If neither is set,
+sensible defaults are used.
 
 | Variable   | Default                    | Purpose                        |
 |------------|----------------------------|--------------------------------|

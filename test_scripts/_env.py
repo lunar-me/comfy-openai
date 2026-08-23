@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Shared helper for the API test scripts.
 
-Loads the project-root ``.env`` file (if present) into ``os.environ`` so every
-test script can be configured from a single file instead of relying only on
-shell environment variables. Real OS environment variables always take
-precedence over values read from ``.env``.
+Loads a ``.env`` file into ``os.environ`` so every test script can be
+configured from a single file instead of relying only on shell environment
+variables. The script-local ``.env`` (``test_scripts/.env``) is preferred,
+with the project-root ``.env`` as a fallback. Real OS environment variables
+always take precedence over values read from ``.env``.
 
 Usage::
 
@@ -26,14 +27,24 @@ _loaded = False
 
 
 def load_env() -> None:
-    """Load ``.env`` from the project root into ``os.environ`` (once)."""
+    """Load ``.env`` into ``os.environ`` (once).
+
+    The script-local ``.env`` (``test_scripts/.env``) is preferred; the
+    project-root ``.env`` is used as a fallback. Real OS environment variables
+    always take precedence over values read from ``.env``.
+    """
     global _loaded
     if _loaded:
         return
     _loaded = True
 
-    root = Path(__file__).resolve().parent.parent
-    env_path = root / ".env"
+    script_dir = Path(__file__).resolve().parent
+    root = script_dir.parent
+
+    # Prefer the script's own directory, fall back to the project root.
+    env_path = script_dir / ".env"
+    if not env_path.exists():
+        env_path = root / ".env"
 
     if load_dotenv is not None:
         # override=False: existing OS vars win over .env values.
