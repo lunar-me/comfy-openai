@@ -77,6 +77,9 @@ The API listens on `http://localhost:8000`.
 python -m pytest tests/ -v
 ```
 
+For quick manual checks against a running server, see the minimal standalone
+scripts in `test_scripts/` (one per API mode: list models, generate, edit).
+
 ## Endpoints
 
 | Method | Path                    | Description                          |
