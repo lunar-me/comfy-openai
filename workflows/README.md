@@ -45,7 +45,7 @@ The app loads this file at request time (path configurable via
 
 Instead of finding node IDs by hand, run the helper script on an **API-format**
 workflow and it will try to identify the nodes for `prompt`, `negative_prompt`,
-`seed`, `width`, `height`, `latent`, `steps`, and `cfg`:
+`input_image`, `seed`, `width`, `height`, `latent`, `steps`, and `cfg`:
 
 ```bash
 python workflows/guess_nodes.py workflows/my_workflow.json
@@ -72,7 +72,8 @@ Guessed nodes:
 > wrong, then copy the `nodes` block into `models.json`.
 
 Heuristics used (same mapping as the table below): CLIP text encodes for
-prompts, `RandomNoise`/`noise_seed` for seed, `PrimitiveInt` (by title) for
+prompts, `LoadImage` for the input/reference image (img2img), 
+`RandomNoise`/`noise_seed` for seed, `PrimitiveInt` (by title) for
 width/height, `Empty*LatentImage` for the latent, `*Scheduler`/`steps` for
 steps, and `CFGGuider`/`cfg` for cfg.
 
@@ -99,6 +100,7 @@ You need to know which node IDs correspond to:
 |------------------|-------------------------------------------|------------------|
 | `prompt`         | `CLIPTextEncode` (positive)               | `text`           |
 | `negative_prompt`| `CLIPTextEncode` (negative)               | `text`           |
+| `input_image`    | `LoadImage` (img2img reference image)     | `image`          |
 | `seed`           | `RandomNoise`                             | `noise_seed`     |
 | `width`          | `PrimitiveInt` (width)                    | `value`          |
 | `height`         | `PrimitiveInt` (height)                   | `value`          |

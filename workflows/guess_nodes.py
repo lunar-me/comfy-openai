@@ -6,7 +6,8 @@ This helper reads a ComfyUI **API-format** workflow JSON (the flat
 editor via *Workflow > Export (API)*) and tries to identify which nodes play
 each role used by the model registry:
 
-    prompt, negative_prompt, seed, width, height, latent, steps, cfg
+    prompt, negative_prompt, input_image, seed, width, height, latent,
+    steps, cfg
 
 It writes its best guesses to ``models_guess.json`` in this directory. That
 file is **not** read by the application — it is only a starting point. Review
@@ -39,6 +40,7 @@ DEFAULT_OUT = Path(__file__).parent / "models_guess.json"
 ROLES = [
     "prompt",
     "negative_prompt",
+    "input_image",
     "seed",
     "width",
     "height",
@@ -82,6 +84,10 @@ def guess_nodes(workflow: dict) -> dict:
                 candidates["prompt"].append(node_id)
             else:
                 candidates["prompt"].append(node_id)
+
+        # input_image: LoadImage (reference image for img2img workflows)
+        if "loadimage" in cls:
+            candidates["input_image"].append(node_id)
 
         # seed: RandomNoise or a node with noise_seed
         if "randomnoise" in cls or "noise_seed" in inputs:
