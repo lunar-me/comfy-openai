@@ -1,7 +1,8 @@
 # API Test Scripts
 
 Minimal standalone scripts, one per supported API mode. Each talks to a **running**
-API server over HTTP and prints the result.
+API server over HTTP, prints the result, and (for generation/edit) saves the
+returned image to the current directory.
 
 ## Prerequisites
 
@@ -23,16 +24,17 @@ preferred, with the project-root `.env` as a fallback. Real OS environment
 variables always take precedence over `.env` values. If neither is set,
 sensible defaults are used.
 
-| Variable   | Default                    | Purpose                        |
-|------------|----------------------------|--------------------------------|
-| `BASE_URL` | `http://localhost:8000/v1` | API base URL (with `/v1`)     |
-| `API_KEY`  | `local-key`                | API key (sent as Bearer token)|
-| `MODEL`    | `flux` / `flux-edit`       | Model id used by the script   |
+| Variable       | Default                    | Purpose |
+|----------------|----------------------------|---------|
+| `BASE_URL`     | `http://localhost:8000/v1` | API base URL (must include `/v1`) |
+| `API_KEY`      | `local-key`                | API key (sent as Bearer token) |
+| `MODEL`        | `flux` / `flux-edit`       | Model id used by the script |
+| `OUTPUT_IMAGE` | `response_image`           | Base filename for saved images (02 and 03). The correct extension (`.png` / `.jpg`) is detected from the image bytes and appended automatically. |
 
-Copy `.env.example` to `.env` and edit as needed:
+Copy `.env.example` to `test_scripts/.env` and edit as needed:
 
 ```bash
-cp ../.env.example ../.env
+cp ../.env.example test_scripts/.env
 ```
 
 Example override (shell env wins over `.env`):
@@ -55,9 +57,16 @@ BASE_URL=http://localhost:8000/v1 MODEL=flux-edit python test_scripts/03_edit_im
 # 1. List models
 python test_scripts/01_list_models.py
 
-# 2. Generate an image from a prompt
+# 2. Generate an image from a prompt (saves response_image.<png|jpg>)
 python test_scripts/02_generate_image.py
 
-# 3. Edit an image (pass a path to an input image)
+# 3. Edit an image (pass a path to an input image; saves response_image.<png|jpg>)
 python test_scripts/03_edit_image.py path/to/original.png
 ```
+
+## Output
+
+Scripts 02 and 03 save the generated image to the current directory using the
+base name from `OUTPUT_IMAGE` (default `response_image`). The file extension
+is detected from the image's magic bytes — `.png` for PNG, `.jpg` for JPEG —
+so the saved file is always correct regardless of what the backend returns.
