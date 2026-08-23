@@ -33,7 +33,7 @@ LOGGING_CONFIG = {
     },
     "loggers": {
         "uvicorn": {"handlers": ["default"], "level": "INFO", "propagate": False},
-        "uvicorn.error": {"level": "INFO", "handlers": ["default"], "propagate": True},
+        "uvicorn.error": {"level": "INFO"},
         "uvicorn.access": {"handlers": ["access"], "level": "INFO", "propagate": False},
     },
 }
@@ -43,6 +43,5 @@ if __name__ == "__main__":
         "app.main:app",
         host=settings.api_host,
         port=settings.api_port,
-        reload=True,
         log_config=LOGGING_CONFIG,
     )
