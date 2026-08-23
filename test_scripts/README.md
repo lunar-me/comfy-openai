@@ -17,16 +17,15 @@ API server over HTTP and prints the result.
 
 ## Configuration
 
-All scripts read these settings from environment variables **or** the project-root
-`.env` file (see [`.env.example`](../.env.example)). Real OS environment variables
-always take precedence over `.env` values. If no `.env` file exists, sensible
-defaults are used.
+All scripts load the project-root `.env` file (if present) into the environment,
+then read settings via `os.environ.get(...)`. Real OS environment variables always
+take precedence over `.env` values. If neither is set, sensible defaults are used.
 
-| Variable   | Default                  | Purpose                        |
-|------------|--------------------------|--------------------------------|
-| `BASE_URL` | `http://localhost:8000`  | API base URL. The scripts append `/v1` automatically if missing. |
-| `API_KEY`  | `local-key`              | API key (sent as Bearer token)|
-| `MODEL`    | `flux` / `flux-edit`     | Model id used by the script   |
+| Variable   | Default                    | Purpose                        |
+|------------|----------------------------|--------------------------------|
+| `BASE_URL` | `http://localhost:8000/v1` | API base URL (with `/v1`)     |
+| `API_KEY`  | `local-key`                | API key (sent as Bearer token)|
+| `MODEL`    | `flux` / `flux-edit`       | Model id used by the script   |
 
 Copy `.env.example` to `.env` and edit as needed:
 

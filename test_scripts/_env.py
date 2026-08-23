@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Shared helpers for the API test scripts.
+"""Shared helper for the API test scripts.
 
-Loads the project-root ``.env`` file (if present) so every test script can be
-configured from a single file instead of relying only on shell environment
-variables. Real OS environment variables always take precedence over values
-read from ``.env``.
+Loads the project-root ``.env`` file (if present) into ``os.environ`` so every
+test script can be configured from a single file instead of relying only on
+shell environment variables. Real OS environment variables always take
+precedence over values read from ``.env``.
 
-Run the scripts from the repository root as usual, e.g.::
+Usage::
 
-    python test_scripts/01_list_models.py
+    from _env import load_env
+
+    load_env()
+    base_url = os.environ.get("BASE_URL", "http://localhost:8000/v1")
 """
 
 import os
@@ -50,22 +53,3 @@ def _parse_simple(env_path: Path) -> None:
         value = value.strip().strip("\"'")
         if key and key not in os.environ:
             os.environ[key] = value
-
-
-def get_env(name: str, default: str = "") -> str:
-    """Resolve an env var as: OS env > ``.env`` > ``default``."""
-    load_env()
-    return os.environ.get(name, default)
-
-
-def get_api_url(default: str = "http://localhost:8000/v1") -> str:
-    """API base URL for the scripts, ensuring it ends with ``/v1``.
-
-    Reads ``BASE_URL`` (from the OS env or ``.env``) and appends ``/v1`` if it
-    is not already present, so scripts always target the API endpoint.
-    """
-    load_env()
-    url = os.environ.get("BASE_URL", default).rstrip("/")
-    if not url.endswith("/v1"):
-        url += "/v1"
-    return url

@@ -5,12 +5,16 @@ Run the API server first (python main.py), then:
     python test_scripts/01_list_models.py
 """
 
+import os
+
 import httpx
 
-from _env import get_api_url, get_env
+from _env import load_env
 
-BASE_URL = get_api_url("http://localhost:8000/v1")
-API_KEY = get_env("API_KEY", "local-key")
+load_env()
+
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000/v1")
+API_KEY = os.environ.get("API_KEY", "local-key")
 
 
 print(BASE_URL)
