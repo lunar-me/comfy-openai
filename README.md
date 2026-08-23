@@ -56,11 +56,12 @@ cp .env.example .env
 
 Key settings in `.env`:
 
-| Variable    | Default                | Description                          |
-|-------------|------------------------|--------------------------------------|
-| `COMFY_URL` | `http://localhost:8188`| ComfyUI server address               |
-| `API_PORT`  | `8000`                 | Port the FastAPI server listens on    |
-| `BASE_URL`  | `http://localhost:8000`| Public base URL used in image URLs    |
+| Variable           | Default                    | Description                                   |
+|--------------------|----------------------------|-----------------------------------------------|
+| `COMFY_URL`        | `http://localhost:8188`    | ComfyUI server address                        |
+| `API_PORT`         | `8000`                     | Port the FastAPI server listens on            |
+| `BASE_URL`         | `http://localhost:8000`    | Public base URL used in image URLs            |
+| `WORKFLOW_REGISTRY`| `workflows/models.json`    | Path to the model registry config file        |
 
 ## Run
 
@@ -113,7 +114,7 @@ image_data = response.data[0].b64_json    # base64-encoded PNG bytes
 ## How it works
 
 1. `POST /v1/images/generations` validates the request.
-2. The model name is resolved against the registry in `app/comfy/workflow.py`.
+2. The model name is resolved against the registry in `workflows/models.json`.
 3. The `WorkflowAdapter` injects the prompt, dimensions, seed, and batch size
    into the ComfyUI API-format workflow (it is the only code that knows node IDs).
 4. The workflow is submitted to ComfyUI via `POST /prompt`, and the server
@@ -123,24 +124,33 @@ image_data = response.data[0].b64_json    # base64-encoded PNG bytes
 
 ## Models
 
-Only `flux` is registered initially. Add more entries to `MODELS` in
-`app/comfy/workflow.py`:
+The model registry lives in **`workflows/models.json`** — a config file, not code.
+It maps model names to their workflow JSON and node map, so you can register any
+ComfyUI workflow **without changing Python code**.
 
-```python
-MODELS = {
-    "flux": {
-        "workflow": "workflows/image_flux2_text_to_image_9b.json",
-        "nodes": {
-            "prompt": "75:74",
-            "negative_prompt": "75:67",
-            "seed": "75:73",
-            "width": "75:68",
-            "height": "75:69",
-            "latent": "75:66",
-            "steps": "75:62",
-            "cfg": "75:63",
-        },
-        "sizes": ["1024x1024", "512x512", "768x768"],
-        "owned_by": "local",
+Only `flux` is registered out of the box:
+
+```json
+{
+  "flux": {
+    "workflow": "workflows/image_flux2_text_to_image_9b.json",
+    "nodes": {
+      "prompt": "75:74",
+      "negative_prompt": "75:67",
+      "seed": "75:73",
+      "width": "75:68",
+      "height": "75:69",
+      "latent": "75:66",
+      "steps": "75:62",
+      "cfg": "75:63"
     },
+    "sizes": ["1024x1024", "512x512", "768x768"],
+    "owned_by": "local"
+  }
 }
+```
+
+To add a model: export your workflow from ComfyUI in **API format**, drop the
+`.json` into `workflows/`, and add a matching entry to `workflows/models.json`.
+The new model is available immediately (the registry is re-read per request).
+See **`workflows/README.md`** for the full step-by-step guide.

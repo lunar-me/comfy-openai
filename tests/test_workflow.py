@@ -1,4 +1,10 @@
-from app.comfy.workflow import WorkflowAdapter, parse_size
+from app.comfy.workflow import (
+    ModelNotFoundError,
+    WorkflowAdapter,
+    get_adapter,
+    load_models,
+    parse_size,
+)
 
 # Node map mirrors workflows/image_flux2_text_to_image_9b.json
 NODE_MAP = {
@@ -11,6 +17,27 @@ NODE_MAP = {
     "steps": "75:62",
     "cfg": "75:63",
 }
+
+
+def test_load_models_returns_registry():
+    registry = load_models("workflows/models.json")
+    assert "flux" in registry
+    assert registry["flux"]["workflow"] == "workflows/image_flux2_text_to_image_9b.json"
+    assert registry["flux"]["nodes"]["prompt"] == "75:74"
+
+
+def test_get_adapter_resolves_model():
+    adapter, meta = get_adapter("flux")
+    assert isinstance(adapter, WorkflowAdapter)
+    assert meta["owned_by"] == "local"
+
+
+def test_get_adapter_unknown_model_raises():
+    try:
+        get_adapter("does-not-exist")
+    except ModelNotFoundError:
+        return
+    raise AssertionError("Expected ModelNotFoundError")
 
 
 def test_build_injects_values():

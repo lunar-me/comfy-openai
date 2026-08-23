@@ -1,0 +1,17 @@
+{
+  "flux": {
+    "workflow": "workflows/image_flux2_text_to_image_9b.json",
+    "nodes": {
+      "prompt": "75:74",
+      "negative_prompt": "75:67",
+      "seed": "75:73",
+      "width": "75:68",
+      "height": "75:69",
+      "latent": "75:66",
+      "steps": "75:62",
+      "cfg": "75:63"
+    },
+    "sizes": ["1024x1024", "512x512", "768x768"],
+    "owned_by": "local"
+  }
+}

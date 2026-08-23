@@ -2,6 +2,8 @@ import json
 import random
 from pathlib import Path
 
+from app.config import settings
+
 
 class ModelNotFoundError(Exception):
     """Raised when a requested model is not registered."""
@@ -72,28 +74,30 @@ class WorkflowAdapter:
 
 # --- Model registry -----------------------------------------------------------
 
-MODELS = {
-    "flux": {
-        "workflow": "workflows/image_flux2_text_to_image_9b.json",
-        "nodes": {
-            "prompt": "75:74",
-            "negative_prompt": "75:67",
-            "seed": "75:73",
-            "width": "75:68",
-            "height": "75:69",
-            "latent": "75:66",
-            "steps": "75:62",
-            "cfg": "75:63",
-        },
-        "sizes": ["1024x1024", "512x512", "768x768"],
-        "owned_by": "local",
-    },
-}
+def load_models(registry_path: str | None = None) -> dict:
+    """Load the model registry from the configured JSON file.
+
+    The registry file maps model names to their workflow path, node map,
+    supported sizes, and ownership. It lives outside the codebase so users
+    can register new workflows without changing code.
+    """
+    path = Path(registry_path or settings.workflow_registry)
+    if not path.exists():
+        raise ModelNotFoundError(
+            f"Model registry file not found: {path}. "
+            "See workflows/README.md for setup instructions."
+        )
+    registry = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(registry, dict):
+        raise ModelNotFoundError(
+            f"Model registry file must contain a JSON object: {path}"
+        )
+    return registry
 
 
 def get_adapter(model: str) -> tuple[WorkflowAdapter, dict]:
     """Return the WorkflowAdapter and its model metadata for a model name."""
-    entry = MODELS.get(model)
+    entry = load_models().get(model)
     if entry is None:
         raise ModelNotFoundError(f"Unknown model: {model}")
     adapter = WorkflowAdapter(entry["workflow"], entry["nodes"])

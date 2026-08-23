@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     api_key: str = "local-key"
     output_dir: str = "output"
     base_url: str = "http://localhost:8000"
+    workflow_registry: str = "workflows/models.json"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
