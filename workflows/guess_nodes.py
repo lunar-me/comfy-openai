@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -187,8 +188,15 @@ def main(argv: list[str] | None = None) -> int:
 
     guesses = guess_nodes(data)
 
+    # Always report the workflow path relative to the current working
+    # directory with forward slashes, matching how it appears in models.json.
+    try:
+        rel_workflow = str(Path(os.path.relpath(args.workflow))).replace(os.sep, "/")
+    except ValueError:
+        rel_workflow = str(args.workflow)
+
     output = {
-        "workflow": str(args.workflow),
+        "workflow": rel_workflow,
         "note": (
             "Auto-generated guesses. models_guess.json is NOT read by the app. "
             "Review these, fix anything wrong, and copy the 'nodes' into "
@@ -205,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print(f"Wrote guesses to {args.out}")
-    print(f"Workflow: {args.workflow}")
+    print(f"Workflow: {rel_workflow}")
     print("Guessed nodes:")
     for role, entry in guesses.items():
         flag = "?" if entry["confidence"] < 1.0 else " "
