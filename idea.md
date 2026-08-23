@@ -6,7 +6,7 @@ ComfyUI already gives us the key primitives we need: submit an API-format workfl
 
 ```text
                          ┌──────────────────────┐
-                         │ Existing application  │
+                         │ Existing application │
                          │                      │
                          │ OpenAI Python SDK    │
                          └──────────┬───────────┘
@@ -22,7 +22,7 @@ ComfyUI already gives us the key primitives we need: submit an API-format workfl
                     │  /v1/images/generations     │
                     │                             │
                     │  ┌───────────────────────┐  │
-                    │  │ Request validation     │  │
+                    │  │ Request validation    │  │
                     │  │ Model → workflow      │  │
                     │  │ Prompt injection      │  │
                     │  │ Size/seed injection   │  │
@@ -35,7 +35,7 @@ ComfyUI already gives us the key primitives we need: submit an API-format workfl
                     │          ComfyUI            │
                     │        localhost:8188       │
                     │                             │
-                    │  workflow → sampler → VAE  │
+                    │  workflow → sampler → VAE   │
                     │                 ↓           │
                     │              image          │
                     └─────────────┬───────────────┘
