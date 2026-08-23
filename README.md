@@ -97,8 +97,18 @@ python -m pytest tests/ -v
 }
 ```
 
-Supported options: `model`, `prompt`, `n` (1-4), `size`, `response_format`
-(`url` or `b64_json`), `seed`, and optional `negative_prompt`, `steps`, `cfg`.
+Supported options: `model`, `prompt`, `n` (1-4), `size`, `response_format`,
+`seed`, and optional `negative_prompt`, `steps`, `cfg`.
+
+Each generated image returns **both** `url` and `b64_json`, so both access
+patterns always work regardless of `response_format`:
+
+```python
+response = client.images.generate(model="flux", prompt="...", size="1024x1024")
+
+image_url = response.data[0].url          # http://localhost:8000/images/<file>
+image_data = response.data[0].b64_json    # base64-encoded PNG bytes
+```
 
 ## How it works
 

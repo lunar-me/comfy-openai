@@ -117,15 +117,13 @@ async def generate_images(
                 output_image.type,
             )
 
-            if request.response_format == "b64_json":
-                images.append(
-                    ImageData(
-                        b64_json=base64.b64encode(data).decode("ascii"),
-                    )
+            url = storage.save(data)
+            images.append(
+                ImageData(
+                    url=url,
+                    b64_json=base64.b64encode(data).decode("ascii"),
                 )
-            else:
-                url = storage.save(data)
-                images.append(ImageData(url=url))
+            )
 
         return ImageGenerationResponse(
             created=int(time.time()),
