@@ -3,6 +3,43 @@ import time
 
 from app.comfy.client import ComfyClient, ComfyError
 
+# Video container extensions that a history "format" string may denote.
+VIDEO_FORMATS = {"mp4", "webm", "mov", "avi", "mkv", "gif"}
+
+
+def _video_format(fmt) -> str | None:
+    """Return a clean video extension for a history ``format`` value, or None.
+
+    Handles plain extensions ("mp4") and mime-ish strings such as
+    "video/h264-mp4" (-> "mp4"). Returns None when the value is not a video.
+    """
+    if not fmt:
+        return None
+    fmt = str(fmt).lower()
+    if "/" in fmt:
+        fmt = fmt.rsplit("/", 1)[-1]
+    if "-" in fmt:
+        fmt = fmt.rsplit("-", 1)[-1]
+    return fmt if fmt in VIDEO_FORMATS else None
+
+
+def _video_ext(entry: dict) -> str | None:
+    """Return a clean video extension for a history output entry, or None.
+
+    Uses the entry's ``format`` field first (plain or mime-ish), then falls
+    back to the filename extension (e.g. "clip.mp4"). Returns None when the
+    entry is not a video.
+    """
+    fmt = _video_format(entry.get("format", ""))
+    if fmt:
+        return fmt
+    name = str(entry.get("filename", ""))
+    if "." in name:
+        ext = name.rsplit(".", 1)[-1].lower()
+        if ext in VIDEO_FORMATS:
+            return ext
+    return None
+
 
 class ExecutionTimeoutError(Exception):
     """Raised when ComfyUI does not finish executing within the timeout."""
@@ -99,6 +136,10 @@ class ComfyExecutor:
 
         for node_output in outputs.values():
             for image in node_output.get("images", []):
+                # A video file may be reported under the "images" key with a
+                # video format/extension — that belongs to _extract_videos.
+                if _video_ext(image):
+                    continue
                 images.append(
                     OutputImage(
                         filename=image["filename"],
@@ -110,24 +151,35 @@ class ComfyExecutor:
         return images
 
     def _extract_videos(self, history_entry: dict, prompt_id: str) -> list[OutputVideo]:
-        """Collect videos reported by SaveVideo nodes.
+        """Collect videos reported by SaveVideo/CreateVideo nodes.
 
-        ComfyUI's SaveVideo node (VideoHelperSuite) reports its output under the
-        history key ``outputs[].gifs`` (each entry has filename/subfolder/type
-        plus a ``format`` such as "mp4").
+        Different ComfyUI video nodes report their output under different keys:
+        VideoHelperSuite's SaveVideo uses ``outputs[].gifs``, some built-in
+        nodes use ``outputs[].videos``, and others report the video file under
+        ``outputs[].images`` with a video ``format``. We check all of these and
+        normalize the format to a clean file extension.
         """
         videos: list[OutputVideo] = []
         outputs = (history_entry or {}).get("outputs", {})
 
         for node_output in outputs.values():
-            for video in node_output.get("gifs", []):
-                videos.append(
-                    OutputVideo(
-                        filename=video["filename"],
-                        subfolder=video.get("subfolder", ""),
-                        type=video.get("type", "output"),
-                        format=video.get("format", "mp4"),
-                    )
-                )
+            for key in ("gifs", "videos"):
+                for video in node_output.get(key, []):
+                    videos.append(self._to_output_video(video))
+
+            # Built-in SaveVideo may report the video under "images" too.
+            for image in node_output.get("images", []):
+                if _video_ext(image):
+                    videos.append(self._to_output_video(image))
 
         return videos
+
+    @staticmethod
+    def _to_output_video(video: dict) -> OutputVideo:
+        """Build an OutputVideo, normalizing the format to a clean extension."""
+        return OutputVideo(
+            filename=video["filename"],
+            subfolder=video.get("subfolder", ""),
+            type=video.get("type", "output"),
+            format=_video_ext(video) or "mp4",
+        )
