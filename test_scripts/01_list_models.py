@@ -9,11 +9,11 @@ import os
 
 import httpx
 
-from _env import load_env
+from _env import api_base_url, load_env
 
 load_env()
 
-BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000/v1")
+BASE_URL = api_base_url()
 API_KEY = os.environ.get("API_KEY", "local-key")
 
 

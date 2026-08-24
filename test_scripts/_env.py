@@ -64,3 +64,18 @@ def _parse_simple(env_path: Path) -> None:
         value = value.strip().strip("\"'")
         if key and key not in os.environ:
             os.environ[key] = value
+
+
+def api_base_url(default: str = "http://localhost:8000/v1") -> str:
+    """Return the API base URL from ``BASE_URL``, normalized to include ``/v1``.
+
+    Users often set ``BASE_URL`` to the app's origin (``http://localhost:8000``)
+    instead of the API endpoint (``http://localhost:8000/v1``). Normalizing here
+    means either form works, so a missing ``/v1`` can never direct a request at
+    the wrong path — e.g. a POST to the static ``/videos`` mount, which only
+    serves GET and would otherwise return ``405 Method Not Allowed``.
+    """
+    base = os.environ.get("BASE_URL", default).rstrip("/")
+    if not base.endswith("/v1"):
+        base += "/v1"
+    return base
