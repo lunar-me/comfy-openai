@@ -17,11 +17,28 @@ class OutputImage:
         self.type = type
 
 
+class OutputVideo:
+    """A generated video returned by ComfyUI (from a SaveVideo node)."""
+
+    def __init__(
+        self,
+        filename: str,
+        subfolder: str = "",
+        type: str = "output",
+        format: str = "mp4",
+    ):
+        self.filename = filename
+        self.subfolder = subfolder
+        self.type = type
+        self.format = format
+
+
 class ExecutionResult:
     """Result of a completed ComfyUI execution."""
 
-    def __init__(self, images: list[OutputImage]):
-        self.images = images
+    def __init__(self, images: list[OutputImage] | None = None, videos: list[OutputVideo] | None = None):
+        self.images = images or []
+        self.videos = videos or []
 
 
 class ComfyExecutor:
@@ -45,13 +62,14 @@ class ComfyExecutor:
         history = await self._wait_for_completion(prompt_id)
 
         images = self._extract_images(history, prompt_id)
+        videos = self._extract_videos(history, prompt_id)
 
-        if not images:
+        if not images and not videos:
             raise ComfyError(
-                f"ComfyUI completed but produced no images for {prompt_id}"
+                f"ComfyUI completed but produced no output for {prompt_id}"
             )
 
-        return ExecutionResult(images)
+        return ExecutionResult(images, videos)
 
     async def _wait_for_completion(self, prompt_id: str) -> dict:
         """Poll /history/{id} until the prompt's status is 'success' or timeout."""
@@ -90,3 +108,26 @@ class ComfyExecutor:
                 )
 
         return images
+
+    def _extract_videos(self, history_entry: dict, prompt_id: str) -> list[OutputVideo]:
+        """Collect videos reported by SaveVideo nodes.
+
+        ComfyUI's SaveVideo node (VideoHelperSuite) reports its output under the
+        history key ``outputs[].gifs`` (each entry has filename/subfolder/type
+        plus a ``format`` such as "mp4").
+        """
+        videos: list[OutputVideo] = []
+        outputs = (history_entry or {}).get("outputs", {})
+
+        for node_output in outputs.values():
+            for video in node_output.get("gifs", []):
+                videos.append(
+                    OutputVideo(
+                        filename=video["filename"],
+                        subfolder=video.get("subfolder", ""),
+                        type=video.get("type", "output"),
+                        format=video.get("format", "mp4"),
+                    )
+                )
+
+        return videos

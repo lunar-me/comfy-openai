@@ -20,6 +20,7 @@ pass as `model` in an OpenAI request). Each entry describes:
 ```jsonc
 {
   "flux": {
+    "type": "image",                    // "image" (default) or "video"
     "workflow": "workflows/image_flux2_text_to_image_9b.json", // path to the API-format workflow JSON
     "nodes": {
       "prompt": "75:74",            // node ID holding the positive prompt
@@ -37,6 +38,11 @@ pass as `model` in an OpenAI request). Each entry describes:
 }
 ```
 
+The `type` field routes a model to the right endpoint: `"image"` models are
+served by `/v1/images/generations` and `/v1/images/edits`, while `"video"`
+models are served by `/v1/videos/generations`. It defaults to `"image"` when
+omitted, so existing entries keep working unchanged.
+
 The app loads this file at request time (path configurable via
 `WORKFLOW_REGISTRY` in `.env`). Edit it and your models appear immediately —
 **no code, no restart required** (the registry is re-read per request).
@@ -45,7 +51,8 @@ The app loads this file at request time (path configurable via
 
 Instead of finding node IDs by hand, run the helper script on an **API-format**
 workflow and it will try to identify the nodes for `prompt`, `negative_prompt`,
-`input_image`, `seed`, `width`, `height`, `latent`, `steps`, and `cfg`:
+`input_image`, `seed`, `width`, `height`, `latent`, `steps`, and `cfg` (image
+workflows), plus `resolution_selector` and `duration` (video workflows):
 
 ```bash
 python workflows/guess_nodes.py workflows/my_workflow.json
@@ -56,16 +63,19 @@ alternative candidates and a per-role confidence score), and prints a summary:
 
 ```text
 Wrote guesses to workflows/models_guess.json
+Workflow: workflows/MINIMAX H3 T2V.json
+Type: video
 Guessed nodes:
-   prompt          -> 1:74
-   negative_prompt -> 1:67
-   seed            -> 1:73
-   width           -> 1:68
-   height          -> 1:69
-   latent          -> 1:66
-   steps           -> 1:62
-   cfg             -> 1:63
+   prompt          -> 105:104
+   seed            -> 105:15
+   resolution_selector -> 115
+   duration        -> 105:111
 ```
+
+The script also detects whether the workflow is a **video** workflow (it has a
+`ResolutionSelector` or `duration` node) and writes the matching `"type"` field
+(`"video"` or `"image"`) into the output, so you can copy it straight into
+`models.json`.
 
 > **`models_guess.json` is NOT read by the app.** It is only a guide. Review
 > the guesses — especially any flagged with `?` (low confidence) — fix what's
@@ -75,7 +85,10 @@ Heuristics used (same mapping as the table below): CLIP text encodes for
 prompts, `LoadImage` for the input/reference image (img2img), 
 `RandomNoise`/`noise_seed` for seed, `PrimitiveInt` (by title) for
 width/height, `Empty*LatentImage` for the latent, `*Scheduler`/`steps` for
-steps, and `CFGGuider`/`cfg` for cfg.
+steps, and `CFGGuider`/`cfg` for cfg. For video: any node with a raw `prompt`
+input (e.g. `MiniMaxH3ImageToVideo`) for the prompt, `ResolutionSelector` for
+`resolution_selector`, and a `PrimitiveFloat` titled with duration/seconds for
+`duration`.
 
 ## Setting up a new workflow — step by step
 
@@ -154,6 +167,46 @@ response = client.images.generate(
 ```
 
 It will also show up in `GET /v1/models`.
+
+## Registering a video model
+
+Video models use a different node map than image models. The bundled
+`minimax-h3-t2v` entry looks like this:
+
+```json
+{
+  "minimax-h3-t2v": {
+    "type": "video",
+    "workflow": "workflows/MINIMAX H3 T2V.json",
+    "nodes": {
+      "prompt": "105:104",
+      "resolution_selector": "115",
+      "duration": "105:111",
+      "seed": "105:15"
+    },
+    "aspect_ratios": ["16:9 (Widescreen)", "9:16 (Portrait)", "1:1 (Square)", "4:3 (Standard)", "3:4 (Portrait)", "21:9 (Cinematic)"],
+    "megapixels": [0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0],
+    "owned_by": "local"
+  }
+}
+```
+
+The optional `aspect_ratios` and `megapixels` arrays declare the fixed values the
+`ResolutionSelector` node accepts. When present, the server validates incoming
+requests against them and returns a 400 (`invalid_video_params`) for anything
+else. Omit them to leave a video model unvalidated (passthrough).
+
+| Field        | Node class to look for                    | Input key        |
+|--------------|-------------------------------------------|------------------|
+| `prompt`     | `MiniMaxH3ImageToVideo` (or similar)      | `prompt`         |
+| `resolution_selector` | `ResolutionSelector`                  | `aspect_ratio` + `megapixels` |
+| `duration`   | `PrimitiveFloat` (seconds)                | `value`          |
+| `seed`       | `RandomNoise`                             | `noise_seed`     |
+
+The `duration` value (seconds) is injected into the `PrimitiveFloat` node; the
+workflow's own `ComfyMathExpression` node derives the frame length from it, so
+no frame math is needed in Python. Video results are read from the history
+`outputs[].gifs` key (how ComfyUI's `SaveVideo` node reports its output).
 
 ## Changing the registry location
 

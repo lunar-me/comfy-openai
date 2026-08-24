@@ -1,9 +1,13 @@
 from app.comfy.workflow import (
+    InvalidVideoParamsError,
     ModelNotFoundError,
+    VideoWorkflowAdapter,
     WorkflowAdapter,
     get_adapter,
+    get_video_adapter,
     load_models,
     parse_size,
+    validate_video_params,
 )
 
 # Node map mirrors workflows/image_flux2_text_to_image_9b.json
@@ -67,3 +71,89 @@ def test_seed_auto_generated_when_none():
 def test_parse_size_valid():
     assert parse_size("1024x1024") == (1024, 1024)
     assert parse_size("512X768") == (512, 768)
+
+
+# --- Video workflow adapter ---------------------------------------------------
+
+VIDEO_NODE_MAP = {
+    "prompt": "105:104",
+    "resolution_selector": "115",
+    "duration": "105:111",
+    "seed": "105:15",
+}
+
+
+def test_get_video_adapter_resolves_model():
+    adapter, meta = get_video_adapter("minimax-h3-t2v")
+    assert isinstance(adapter, VideoWorkflowAdapter)
+    assert meta["type"] == "video"
+
+
+def test_get_video_adapter_rejects_image_model():
+    try:
+        get_video_adapter("flux")
+    except ModelNotFoundError:
+        return
+    raise AssertionError("Expected ModelNotFoundError for image model on video endpoint")
+
+
+def test_video_adapter_injects_values():
+    adapter = VideoWorkflowAdapter("workflows/MINIMAX H3 T2V.json", VIDEO_NODE_MAP)
+    workflow = adapter.build(
+        prompt="a test video",
+        aspect_ratio="16:9 (Widescreen)",
+        megapixels=0.6,
+        duration=7,
+        seed=42,
+    )
+
+    assert workflow["105:104"]["inputs"]["prompt"] == "a test video"
+    assert workflow["115"]["inputs"]["aspect_ratio"] == "16:9 (Widescreen)"
+    assert workflow["115"]["inputs"]["megapixels"] == 0.6
+    assert workflow["105:111"]["inputs"]["value"] == 7
+    assert workflow["105:15"]["inputs"]["noise_seed"] == 42
+
+
+def test_video_adapter_seed_auto_generated_when_none():
+    adapter = VideoWorkflowAdapter("workflows/MINIMAX H3 T2V.json", VIDEO_NODE_MAP)
+    workflow = adapter.build(
+        prompt="x",
+        aspect_ratio="16:9 (Widescreen)",
+        megapixels=0.4,
+        duration=5,
+        seed=None,
+    )
+    assert isinstance(workflow["105:15"]["inputs"]["noise_seed"], int)
+
+
+def test_validate_video_params_accepts_valid_values():
+    meta = {
+        "aspect_ratios": ["16:9 (Widescreen)", "4:3 (Standard)"],
+        "megapixels": [0.4, 0.6],
+    }
+    validate_video_params("16:9 (Widescreen)", 0.6, meta)  # should not raise
+
+
+def test_validate_video_params_rejects_bad_aspect_ratio():
+    meta = {"aspect_ratios": ["16:9 (Widescreen)"], "megapixels": [0.4]}
+    try:
+        validate_video_params("5:4 (Bogus)", 0.4, meta)
+    except InvalidVideoParamsError as exc:
+        assert exc.param == "aspect_ratio"
+        return
+    raise AssertionError("Expected InvalidVideoParamsError")
+
+
+def test_validate_video_params_rejects_bad_megapixels():
+    meta = {"aspect_ratios": ["16:9 (Widescreen)"], "megapixels": [0.4]}
+    try:
+        validate_video_params("16:9 (Widescreen)", 3.5, meta)
+    except InvalidVideoParamsError as exc:
+        assert exc.param == "megapixels"
+        return
+    raise AssertionError("Expected InvalidVideoParamsError")
+
+
+def test_validate_video_params_skips_when_lists_absent():
+    # Models that don't declare fixed lists are left unvalidated (passthrough).
+    validate_video_params("anything", 123.0, {})  # should not raise

@@ -1,5 +1,6 @@
 {
   "flux": {
+    "type": "image",
     "workflow": "workflows/image_flux2_text_to_image_9b.json",
     "nodes": {
       "prompt": "75:74",
@@ -15,6 +16,7 @@
     "owned_by": "local"
   },
   "flux-edit": {
+    "type": "image",
     "workflow": "workflows/image_flux2_klein_image_edit_9b_base.json",
     "nodes": {
       "prompt": "75:74",
@@ -26,6 +28,26 @@
       "cfg": "75:63"
     },
     "sizes": [],
+    "owned_by": "local"
+  },
+  "minimax-h3-t2v": {
+    "type": "video",
+    "workflow": "workflows/MINIMAX H3 T2V.json",
+    "nodes": {
+      "prompt": "105:104",
+      "resolution_selector": "115",
+      "duration": "105:111",
+      "seed": "105:15"
+    },
+    "aspect_ratios": [
+      "16:9 (Widescreen)",
+      "9:16 (Portrait)",
+      "1:1 (Square)",
+      "4:3 (Standard)",
+      "3:4 (Portrait)",
+      "21:9 (Cinematic)"
+    ],
+    "megapixels": [0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0],
     "owned_by": "local"
   }
 }

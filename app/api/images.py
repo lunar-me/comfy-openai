@@ -3,6 +3,7 @@ import time
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
+from app.api.errors import comfy_error_to_http
 from app.comfy.client import ComfyClient, ComfyError
 from app.comfy.executor import ComfyExecutor, ExecutionTimeoutError
 from app.comfy.workflow import (
@@ -33,58 +34,6 @@ def get_executor() -> ComfyExecutor:
 
 def get_storage() -> ImageStorage:
     return ImageStorage()
-
-
-def _comfy_error_to_http(exc: Exception) -> HTTPException:
-    if isinstance(exc, ModelNotFoundError):
-        return HTTPException(
-            status_code=404,
-            detail={
-                "message": str(exc),
-                "type": "invalid_request_error",
-                "param": "model",
-                "code": "model_not_found",
-            },
-        )
-    if isinstance(exc, InvalidSizeError):
-        return HTTPException(
-            status_code=400,
-            detail={
-                "message": str(exc),
-                "type": "invalid_request_error",
-                "param": "size",
-                "code": "invalid_size",
-            },
-        )
-    if isinstance(exc, ExecutionTimeoutError):
-        return HTTPException(
-            status_code=504,
-            detail={
-                "message": str(exc),
-                "type": "server_error",
-                "param": None,
-                "code": "comfy_timeout",
-            },
-        )
-    if isinstance(exc, ComfyError):
-        return HTTPException(
-            status_code=502,
-            detail={
-                "message": str(exc),
-                "type": "server_error",
-                "param": None,
-                "code": "comfy_execution_error",
-            },
-        )
-    return HTTPException(
-        status_code=500,
-        detail={
-            "message": str(exc),
-            "type": "server_error",
-            "param": None,
-            "code": "internal_error",
-        },
-    )
 
 
 @router.post("/v1/images/generations", response_model=ImageGenerationResponse)
@@ -131,7 +80,7 @@ async def generate_images(
             data=images,
         )
     except (ModelNotFoundError, InvalidSizeError, ExecutionTimeoutError, ComfyError) as exc:
-        raise _comfy_error_to_http(exc) from exc
+        raise comfy_error_to_http(exc) from exc
 
 
 @router.post("/v1/images/edits", response_model=ImageGenerationResponse)
@@ -220,4 +169,4 @@ async def edit_images(
             data=images,
         )
     except (ModelNotFoundError, InvalidSizeError, ExecutionTimeoutError, ComfyError) as exc:
-        raise _comfy_error_to_http(exc) from exc
+        raise comfy_error_to_http(exc) from exc

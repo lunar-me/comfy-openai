@@ -7,7 +7,8 @@ editor via *Workflow > Export (API)*) and tries to identify which nodes play
 each role used by the model registry:
 
     prompt, negative_prompt, input_image, seed, width, height, latent,
-    steps, cfg
+    steps, cfg          (image workflows)
+    prompt, resolution_selector, duration, seed   (video workflows)
 
 It writes its best guesses to ``models_guess.json`` in this directory. That
 file is **not** read by the application — it is only a starting point. Review
@@ -47,6 +48,9 @@ ROLES = [
     "latent",
     "steps",
     "cfg",
+    # Video-only roles (MiniMax H3 text-to-video and similar workflows).
+    "resolution_selector",
+    "duration",
 ]
 
 
@@ -85,6 +89,11 @@ def guess_nodes(workflow: dict) -> dict:
             else:
                 candidates["prompt"].append(node_id)
 
+        # prompt (video): nodes that take a raw `prompt` input, e.g.
+        # MiniMaxH3ImageToVideo. (CLIPTextEncode uses `text`, handled above.)
+        if "prompt" in inputs and not _is_clip_text_encode(node):
+            candidates["prompt"].append(node_id)
+
         # input_image: LoadImage (reference image for img2img workflows)
         if "loadimage" in cls:
             candidates["input_image"].append(node_id)
@@ -114,6 +123,17 @@ def guess_nodes(workflow: dict) -> dict:
         # cfg: CFGGuider or node with a cfg input
         if "cfg" in cls or "cfg" in inputs:
             candidates["cfg"].append(node_id)
+
+        # resolution_selector (video): ResolutionSelector node — takes
+        # aspect_ratio + megapixels and computes the target resolution.
+        if "resolutionselector" in cls:
+            candidates["resolution_selector"].append(node_id)
+
+        # duration (video): PrimitiveFloat titled with duration/seconds.
+        if "primitivefloat" in cls and (
+            "duration" in title or "seconds" in title
+        ):
+            candidates["duration"].append(node_id)
 
     # Disambiguation: prefer titled width/height primitives.
     width_guesses = candidates["width"]
@@ -150,6 +170,13 @@ def guess_nodes(workflow: dict) -> dict:
                 "confidence": confidence,
             }
     return result
+
+
+def guess_type(guesses: dict) -> str:
+    """Return ``"video"`` if the guesses include video-only roles, else ``"image"``."""
+    if guesses.get("resolution_selector") or guesses.get("duration"):
+        return "video"
+    return "image"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -194,6 +221,9 @@ def main(argv: list[str] | None = None) -> int:
 
     guesses = guess_nodes(data)
 
+    # Detect whether this is a video workflow (has video-only roles).
+    model_type = guess_type(guesses)
+
     # Always report the workflow path relative to the current working
     # directory with forward slashes, matching how it appears in models.json.
     try:
@@ -203,6 +233,7 @@ def main(argv: list[str] | None = None) -> int:
 
     output = {
         "workflow": rel_workflow,
+        "type": model_type,
         "note": (
             "Auto-generated guesses. models_guess.json is NOT read by the app. "
             "Review these, fix anything wrong, and copy the 'nodes' into "
@@ -220,6 +251,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Wrote guesses to {args.out}")
     print(f"Workflow: {rel_workflow}")
+    print(f"Type: {model_type}")
     print("Guessed nodes:")
     for role, entry in guesses.items():
         flag = "?" if entry["confidence"] < 1.0 else " "

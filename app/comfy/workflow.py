@@ -13,6 +13,15 @@ class InvalidSizeError(Exception):
     """Raised when the requested size is not supported by a model."""
 
 
+class InvalidVideoParamsError(Exception):
+    """Raised when a video request uses an aspect_ratio or megapixels value
+    that is not in the model's fixed ResolutionSelector lists."""
+
+    def __init__(self, param: str, message: str):
+        super().__init__(message)
+        self.param = param
+
+
 class WorkflowAdapter:
     """
     Boundary between OpenAI request semantics and ComfyUI API workflow JSON.
@@ -79,6 +88,56 @@ class WorkflowAdapter:
         return json.loads(self.workflow_path.read_text(encoding="utf-8"))
 
 
+class VideoWorkflowAdapter:
+    """Boundary between OpenAI video request semantics and ComfyUI API workflow JSON.
+
+    Handles the MiniMax H3 text-to-video workflow, which exposes a text prompt,
+    an aspect_ratio + megapixels pair (the ResolutionSelector node), and a
+    duration in seconds (a PrimitiveFloat that the workflow's MathExpression
+    node turns into a frame length).
+    """
+
+    def __init__(self, workflow_path: str, node_map: dict):
+        self.workflow_path = Path(workflow_path)
+        self.node_map = node_map
+
+    def build(
+        self,
+        prompt: str,
+        aspect_ratio: str,
+        megapixels: float,
+        duration: float,
+        seed: int | None = None,
+    ) -> dict:
+        workflow = self._load()
+
+        # Prompt -> MiniMaxH3ImageToVideo node
+        workflow[self.node_map["prompt"]]["inputs"]["prompt"] = prompt
+
+        # Aspect ratio + megapixels -> ResolutionSelector node
+        res_node = self.node_map["resolution_selector"]
+        workflow[res_node]["inputs"]["aspect_ratio"] = aspect_ratio
+        workflow[res_node]["inputs"]["megapixels"] = megapixels
+
+        # Duration (seconds) -> PrimitiveFloat; the workflow's MathExpression
+        # node derives the frame length from this value.
+        workflow[self.node_map["duration"]]["inputs"]["value"] = duration
+
+        # Seed
+        if seed is None:
+            seed = random.randint(0, 2**53 - 1)
+        workflow[self.node_map["seed"]]["inputs"]["noise_seed"] = seed
+
+        return workflow
+
+    def _load(self) -> dict:
+        if not self.workflow_path.exists():
+            raise ModelNotFoundError(
+                f"Workflow file not found: {self.workflow_path}"
+            )
+        return json.loads(self.workflow_path.read_text(encoding="utf-8"))
+
+
 # --- Model registry -----------------------------------------------------------
 
 def load_models(registry_path: str | None = None) -> dict:
@@ -107,8 +166,46 @@ def get_adapter(model: str) -> tuple[WorkflowAdapter, dict]:
     entry = load_models().get(model)
     if entry is None:
         raise ModelNotFoundError(f"Unknown model: {model}")
+    if entry.get("type", "image") != "image":
+        raise ModelNotFoundError(f"Model is not an image model: {model}")
     adapter = WorkflowAdapter(entry["workflow"], entry["nodes"])
     return adapter, entry
+
+
+def get_video_adapter(model: str) -> tuple[VideoWorkflowAdapter, dict]:
+    """Return the VideoWorkflowAdapter and its model metadata for a model name."""
+    entry = load_models().get(model)
+    if entry is None:
+        raise ModelNotFoundError(f"Unknown model: {model}")
+    if entry.get("type") != "video":
+        raise ModelNotFoundError(f"Model is not a video model: {model}")
+    adapter = VideoWorkflowAdapter(entry["workflow"], entry["nodes"])
+    return adapter, entry
+
+
+def validate_video_params(aspect_ratio: str, megapixels: float, meta: dict) -> None:
+    """Validate aspect_ratio / megapixels against the model's fixed lists.
+
+    The ResolutionSelector node only accepts values from fixed lists. When a
+    model entry declares ``aspect_ratios`` and/or ``megapixels``, reject any
+    request value outside those lists with a clear error. Models that don't
+    declare the lists are left unvalidated (passthrough).
+    """
+    allowed_ratios = meta.get("aspect_ratios")
+    if allowed_ratios and aspect_ratio not in allowed_ratios:
+        raise InvalidVideoParamsError(
+            "aspect_ratio",
+            f"Invalid aspect_ratio {aspect_ratio!r}. Must be one of: "
+            + ", ".join(allowed_ratios),
+        )
+
+    allowed_megapixels = meta.get("megapixels")
+    if allowed_megapixels and megapixels not in allowed_megapixels:
+        raise InvalidVideoParamsError(
+            "megapixels",
+            f"Invalid megapixels {megapixels}. Must be one of: "
+            + ", ".join(str(v) for v in allowed_megapixels),
+        )
 
 
 def parse_size(size: str) -> tuple[int, int]:

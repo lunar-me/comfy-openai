@@ -1,8 +1,10 @@
 # ComfyUI OpenAI-compatible API
 
-A thin FastAPI layer that exposes ComfyUI as an OpenAI-compatible image-generation API.
+A thin FastAPI layer that exposes ComfyUI as an OpenAI-compatible image- and
+video-generation API.
 
-Applications using the OpenAI Python SDK can generate images through ComfyUI workflows with no code changes:
+Applications using the OpenAI Python SDK can generate images and videos through
+ComfyUI workflows with no code changes:
 
 ```python
 from openai import OpenAI
@@ -84,10 +86,12 @@ scripts in `test_scripts/` (one per API mode: list models, generate, edit).
 
 | Method | Path                    | Description                          |
 |--------|-------------------------|--------------------------------------|
-| GET    | `/v1/models`            | List available image models          |
+| GET    | `/v1/models`            | List available image/video models    |
 | POST   | `/v1/images/generations`| Generate an image (OpenAI-compatible)|
 | POST   | `/v1/images/edits`      | Edit an image (img2img, OpenAI-compatible)|
+| POST   | `/v1/videos/generations`| Generate a video (OpenAI-compatible)|
 | GET    | `/images/{file}`        | Serve a saved generated image        |
+| GET    | `/videos/{file}`        | Serve a saved generated video        |
 
 ## Request example
 
@@ -140,6 +144,54 @@ The edit uses the `input_image` node of the img2img workflow (detected by
 `guess_nodes.py` and registered in `workflows/models.json`). `size` is
 optional — when omitted, the workflow derives dimensions from the input image.
 
+## Video generation example (text-to-video)
+
+`POST /v1/videos/generations` runs a text-to-video workflow (e.g. the bundled
+MiniMax H3 model) and returns each rendered video as a URL and/or base64
+payload. It is **synchronous** — the request blocks until the video is ready
+(video rendering can take minutes, so the endpoint allows a long render window).
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="local-key")
+
+response = client.videos.generate(
+    model="minimax-h3-t2v",
+    prompt="A suburban house with a swimming pool at dusk. "
+           "A realistic flamingo is floating in the swimming pool.",
+    aspect_ratio="16:9 (Widescreen)",
+    megapixels=0.4,
+    duration=5,          # seconds, 1-15 (also accepts "5s")
+    n=1,
+)
+
+video_url = response.data[0].url          # http://localhost:8000/videos/<file>
+video_data = response.data[0].b64_json   # base64-encoded MP4 bytes
+```
+
+Request fields:
+
+| Field          | Type    | Default                | Notes                                   |
+|----------------|---------|------------------------|-----------------------------------------|
+| `model`        | string  | —                      | Required; a registered video model      |
+| `prompt`       | string  | —                      | Required; the text description          |
+| `aspect_ratio` | string  | `16:9 (Widescreen)`    | Passed to the workflow's ResolutionSelector |
+| `megapixels`   | float   | `0.4`                  | Passed to the workflow's ResolutionSelector |
+| `duration`     | float   | `5`                    | Seconds, 1-15; also accepts `"5s"`      |
+| `n`            | int     | `1`                    | Number of videos (1-4)                  |
+| `response_format` | string | `url`               | `url` or `b64_json`                     |
+| `seed`         | int     | `null`                 | Optional; auto-generated when omitted   |
+
+> `aspect_ratio` and `megapixels` are passed straight through to the workflow's
+> `ResolutionSelector` node, which only accepts values from fixed lists. The
+> server validates them against the model's declared lists and returns a 400
+> (`invalid_video_params`) for anything else. The bundled `minimax-h3-t2v`
+> model accepts the aspect ratios `16:9 (Widescreen)`, `9:16 (Portrait)`,
+> `1:1 (Square)`, `4:3 (Standard)`, `3:4 (Portrait)`, `21:9 (Cinematic)` and
+> megapixels `0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0`. The workflow itself
+> computes the target resolution from these — the API never provides one.
+
 ## How it works
 
 1. `POST /v1/images/generations` validates the request.
@@ -157,8 +209,9 @@ The model registry lives in **`workflows/models.json`** — a config file, not c
 It maps model names to their workflow JSON and node map, so you can register any
 ComfyUI workflow **without changing Python code**.
 
-Two models ship out of the box — `flux` (text-to-image) and `flux-edit`
-(img2img). Example:
+Three models ship out of the box — `flux` (text-to-image), `flux-edit`
+(img2img), and `minimax-h3-t2v` (text-to-video). Each entry carries a `type`
+field (`"image"` or `"video"`) that routes it to the correct endpoint. Example:
 
 ```json
 {

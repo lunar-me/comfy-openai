@@ -28,8 +28,9 @@ sensible defaults are used.
 |----------------|----------------------------|---------|
 | `BASE_URL`     | `http://localhost:8000/v1` | API base URL (must include `/v1`) |
 | `API_KEY`      | `local-key`                | API key (sent as Bearer token) |
-| `MODEL`        | `flux` / `flux-edit`       | Model id used by the script |
+| `MODEL`        | `flux` / `flux-edit` / `minimax-h3-t2v` | Model id used by the script |
 | `OUTPUT_IMAGE` | `response_image`           | Base filename for saved images (02 and 03). The correct extension (`.png` / `.jpg`) is detected from the image bytes and appended automatically. |
+| `OUTPUT_VIDEO` | `response_video`           | Base filename for the saved video (04). Always saved as `.mp4`. |
 
 Copy `.env.example` to `test_scripts/.env` and edit as needed:
 
@@ -50,6 +51,7 @@ BASE_URL=http://localhost:8000/v1 MODEL=flux-edit python test_scripts/03_edit_im
 | `01_list_models.py`     | List available models             | `GET /v1/models`        |
 | `02_generate_image.py`  | Text-to-image generation          | `POST /v1/images/generations` |
 | `03_edit_image.py`      | Image edit (img2img)              | `POST /v1/images/edits` |
+| `04_generate_video.py`  | Text-to-video generation          | `POST /v1/videos/generations` |
 
 ## Usage
 
@@ -62,6 +64,9 @@ python test_scripts/02_generate_image.py
 
 # 3. Edit an image (pass a path to an input image; saves response_image.<png|jpg>)
 python test_scripts/03_edit_image.py path/to/original.png
+
+# 4. Generate a video from a prompt (saves response_video.mp4)
+python test_scripts/04_generate_video.py
 ```
 
 ## Output

@@ -76,3 +76,11 @@ class ComfyClient:
             )
         response.raise_for_status()
         return response.content
+
+    async def get_video(self, filename: str, subfolder: str = "", type: str = "output") -> bytes:
+        """Retrieve a generated video's raw bytes from ComfyUI.
+
+        Videos are served from the same /view endpoint as images, so this is a
+        thin alias kept for semantic clarity at the call site.
+        """
+        return await self.get_image(filename, subfolder, type)
