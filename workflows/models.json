@@ -1,4 +1,20 @@
 {
+  "z-image-cyberrealistic": {
+    "type": "image",
+    "workflow": "workflows/image_z_image_cyberrealistic.json",
+    "nodes": {
+     "prompt": "83:27",
+     "seed": "83:3",
+     "latent": "83:13",
+     "steps": "83:3",
+     "cfg": "83:3",
+     "width": "83:13",
+     "height": "83:13",
+     "latent": "75:66"
+    },
+    "sizes": ["1024x1024", "512x512", "768x768","1440x1440", "1920x1088","2048x2048"],
+    "owned_by": "local"
+  },
   "z-image": {
    "type": "image",
    "workflow": "workflows/image_z_image.json",
