@@ -12,6 +12,7 @@ extension is detected from the returned bytes (PNG or JPEG).
 Examples:
     python test_scripts/03_edit_image.py
     python test_scripts/03_edit_image.py input.png
+    python test_scripts/03_edit_image.py --input-image input.png
     python test_scripts/03_edit_image.py input.png --prompt "Add a tree"
     python test_scripts/03_edit_image.py input.png --prompt-file prompt.txt
     python test_scripts/03_edit_image.py input.png -o edited
@@ -52,6 +53,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "'house_and_pool.png'.",
     )
     parser.add_argument(
+        "-i",
+        "--input-image",
+        dest="input_image_override",
+        metavar="PATH",
+        help="Path to the input image. If present, overrides the positional "
+        "input_image argument and the default.",
+    )
+    parser.add_argument(
         "-p",
         "--prompt",
         help="Prompt text. If omitted and --prompt-file is not given, the "
@@ -83,6 +92,15 @@ def resolve_prompt(args: argparse.Namespace) -> str:
     return DEFAULT_PROMPT
 
 
+def resolve_input_image(args: argparse.Namespace) -> str:
+    """Return the input image path.
+
+    ``--input-image`` wins over the positional ``input_image`` argument (which
+    itself defaults to the ``INPUT_IMAGE`` env var or a fixed default).
+    """
+    return args.input_image_override or args.input_image
+
+
 def resolve_output(output: str) -> str:
     """Return the base output path, dropping a trailing image extension if one
     was supplied (the real extension is appended after the format is detected)."""
@@ -106,7 +124,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     prompt = resolve_prompt(args)
     output_base = resolve_output(args.output)
-    input_image = args.input_image
+    input_image = resolve_input_image(args)
 
     with open(input_image, "rb") as f:
         image_bytes = f.read()

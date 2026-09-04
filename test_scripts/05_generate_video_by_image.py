@@ -11,6 +11,7 @@ image-to-video workflow animates it. The generated video is saved as
 Examples:
     python test_scripts/05_generate_video_by_image.py
     python test_scripts/05_generate_video_by_image.py house_and_pool_and_swan.png
+    python test_scripts/05_generate_video_by_image.py --input-image input.png
     python test_scripts/05_generate_video_by_image.py input.png --prompt "The swan flies away"
     python test_scripts/05_generate_video_by_image.py input.png --prompt-file prompt.txt
     python test_scripts/05_generate_video_by_image.py input.png -o my_video
@@ -50,6 +51,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         default=DEFAULT_INPUT_IMAGE,
         help="Path to the input image. Defaults to the INPUT_IMAGE env var or "
         "'house_and_pool_and_swan.png'.",
+    )
+    parser.add_argument(
+        "-i",
+        "--input-image",
+        dest="input_image_override",
+        metavar="PATH",
+        help="Path to the input image. If present, overrides the positional "
+        "input_image argument and the default.",
     )
     parser.add_argument(
         "-p",
@@ -98,6 +107,15 @@ def resolve_prompt(args: argparse.Namespace) -> str:
     return DEFAULT_PROMPT
 
 
+def resolve_input_image(args: argparse.Namespace) -> str:
+    """Return the input image path.
+
+    ``--input-image`` wins over the positional ``input_image`` argument (which
+    itself defaults to the ``INPUT_IMAGE`` env var or a fixed default).
+    """
+    return args.input_image_override or args.input_image
+
+
 def resolve_output(output: str) -> str:
     """Return the output path, ensuring it ends with ``.mp4``."""
     return output if output.lower().endswith(".mp4") else f"{output}.mp4"
@@ -107,7 +125,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     prompt = resolve_prompt(args)
     out_path = resolve_output(args.output)
-    input_image = args.input_image
+    input_image = resolve_input_image(args)
 
     with open(input_image, "rb") as f:
         image_bytes = f.read()

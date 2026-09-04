@@ -66,6 +66,8 @@ python test_scripts/02_generate_image.py
 
 # 3. Edit an image (pass a path to an input image; saves response_image.<png|jpg>)
 python test_scripts/03_edit_image.py path/to/original.png
+#   or via the -i/--input-image option (overrides the positional/default)
+python test_scripts/03_edit_image.py --input-image path/to/original.png
 
 # 4. Generate a video from a prompt (saves response_video.mp4)
 python test_scripts/04_generate_video.py
@@ -82,13 +84,18 @@ python test_scripts/04_generate_video.py --prompt-file prompt.txt
 python test_scripts/04_generate_video.py --prompt "A cat surfing" -o my_video.mp4
 
 # 05 takes the input image, prompt, megapixels, and duration from the CLI too:
+#   input image can be given positionally or via -i/--input-image
 python test_scripts/05_generate_video_by_image.py house_and_pool_and_swan.png \
     --prompt "The swan flies away" --megapixels 0.6 --duration 5 -o swan_fly.mp4
+python test_scripts/05_generate_video_by_image.py -i house_and_pool_and_swan.png \
+    --prompt "The swan flies away"
 ```
 
 Prompt precedence: `--prompt` (CLI) > `--prompt-file` (file contents) > the default
 test prompt. Output filename precedence: `-o/--output` > `OUTPUT_VIDEO` env var >
-`response_video` (always saved as `.mp4`).
+`response_video` (always saved as `.mp4`). Input image precedence (03 and 05):
+`-i/--input-image` (CLI option) > positional `input_image` > `INPUT_IMAGE` env
+var > the built-in default.
 
 ## Output
 
