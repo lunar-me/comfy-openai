@@ -91,10 +91,12 @@ class WorkflowAdapter:
 class VideoWorkflowAdapter:
     """Boundary between OpenAI video request semantics and ComfyUI API workflow JSON.
 
-    Handles the MiniMax H3 text-to-video workflow, which exposes a text prompt,
+    Handles the MiniMax H3 video workflows. Text-to-video exposes a text prompt,
     an aspect_ratio + megapixels pair (the ResolutionSelector node), and a
     duration in seconds (a PrimitiveFloat that the workflow's MathExpression
-    node turns into a frame length).
+    node turns into a frame length). Image-to-video additionally takes an input
+    image (a LoadImage node) and a target megapixels value (an
+    ImageScaleToTotalPixels node) — it has no aspect_ratio.
     """
 
     def __init__(self, workflow_path: str, node_map: dict):
@@ -104,24 +106,38 @@ class VideoWorkflowAdapter:
     def build(
         self,
         prompt: str,
-        aspect_ratio: str,
-        megapixels: float,
-        duration: float,
+        aspect_ratio: str | None = None,
+        megapixels: float | None = None,
+        duration: float | None = None,
         seed: int | None = None,
+        input_image: str | None = None,
     ) -> dict:
         workflow = self._load()
 
         # Prompt -> MiniMaxH3ImageToVideo node
         workflow[self.node_map["prompt"]]["inputs"]["prompt"] = prompt
 
-        # Aspect ratio + megapixels -> ResolutionSelector node
-        res_node = self.node_map["resolution_selector"]
-        workflow[res_node]["inputs"]["aspect_ratio"] = aspect_ratio
-        workflow[res_node]["inputs"]["megapixels"] = megapixels
+        # Input / reference image (image-to-video): LoadImage node expects its
+        # "image" input to be the filename of an image already in ComfyUI.
+        if input_image is not None and (img_node := self.node_map.get("input_image")):
+            workflow[img_node]["inputs"]["image"] = input_image
+
+        # Resolution: text-to-video uses a ResolutionSelector node that takes an
+        # aspect_ratio + megapixels pair. Image-to-video has no aspect_ratio —
+        # it only takes a target megapixels value on an ImageScaleToTotalPixels
+        # node. Apply whichever node(s) the workflow declares.
+        if res_node := self.node_map.get("resolution_selector"):
+            if aspect_ratio is not None:
+                workflow[res_node]["inputs"]["aspect_ratio"] = aspect_ratio
+            if megapixels is not None:
+                workflow[res_node]["inputs"]["megapixels"] = megapixels
+        if megapixels is not None and (mp_node := self.node_map.get("megapixels")):
+            workflow[mp_node]["inputs"]["megapixels"] = megapixels
 
         # Duration (seconds) -> PrimitiveFloat; the workflow's MathExpression
         # node derives the frame length from this value.
-        workflow[self.node_map["duration"]]["inputs"]["value"] = duration
+        if duration is not None and (dur_node := self.node_map.get("duration")):
+            workflow[dur_node]["inputs"]["value"] = duration
 
         # Seed
         if seed is None:
@@ -183,16 +199,19 @@ def get_video_adapter(model: str) -> tuple[VideoWorkflowAdapter, dict]:
     return adapter, entry
 
 
-def validate_video_params(aspect_ratio: str, megapixels: float, meta: dict) -> None:
+def validate_video_params(
+    aspect_ratio: str | None, megapixels: float | None, meta: dict
+) -> None:
     """Validate aspect_ratio / megapixels against the model's fixed lists.
 
     The ResolutionSelector node only accepts values from fixed lists. When a
     model entry declares ``aspect_ratios`` and/or ``megapixels``, reject any
     request value outside those lists with a clear error. Models that don't
-    declare the lists are left unvalidated (passthrough).
+    declare the lists are left unvalidated (passthrough). Image-to-video models
+    have no aspect_ratio, so that check is skipped when aspect_ratio is None.
     """
     allowed_ratios = meta.get("aspect_ratios")
-    if allowed_ratios and aspect_ratio not in allowed_ratios:
+    if aspect_ratio is not None and allowed_ratios and aspect_ratio not in allowed_ratios:
         raise InvalidVideoParamsError(
             "aspect_ratio",
             f"Invalid aspect_ratio {aspect_ratio!r}. Must be one of: "
@@ -200,7 +219,7 @@ def validate_video_params(aspect_ratio: str, megapixels: float, meta: dict) -> N
         )
 
     allowed_megapixels = meta.get("megapixels")
-    if allowed_megapixels and megapixels not in allowed_megapixels:
+    if megapixels is not None and allowed_megapixels and megapixels not in allowed_megapixels:
         raise InvalidVideoParamsError(
             "megapixels",
             f"Invalid megapixels {megapixels}. Must be one of: "

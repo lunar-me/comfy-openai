@@ -9,8 +9,7 @@
      "steps": "83:3",
      "cfg": "83:3",
      "width": "83:13",
-     "height": "83:13",
-     "latent": "75:66"
+     "height": "83:13"
     },
     "sizes": ["1024x1024", "512x512", "768x768","1440x1440", "1920x1088","2048x2048"],
     "owned_by": "local"
@@ -87,6 +86,19 @@
       "21:9 (Cinematic)"
     ],
     "megapixels": [0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0],
+    "owned_by": "local"
+  },
+  "minimax-h3-i2v": {
+    "type": "video",
+    "workflow": "workflows/MINIMAX H3 I2V.json",
+    "nodes": {
+      "input_image": "114",
+      "prompt": "105:104",
+      "megapixels": "119",
+      "duration": "105:111",
+      "seed": "105:15"
+    },
+    "megapixels": [0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0],
     "owned_by": "local"
   }
 }

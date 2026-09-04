@@ -23,6 +23,11 @@ class FakeComfyClient:
     async def get_video(self, filename, subfolder="", type="output") -> bytes:
         return b"fake-video-bytes"
 
+    async def upload_image(
+        self, data, filename, overwrite=False, type="input", subfolder=""
+    ) -> dict:
+        return {"name": filename, "subfolder": subfolder, "type": type}
+
 
 class FakeStorage:
     def __init__(self):
@@ -159,6 +164,59 @@ def test_video_generation_rejects_invalid_megapixels():
                 "prompt": "a test video",
                 "megapixels": 3.5,
             },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "invalid_video_params"
+    assert detail["param"] == "megapixels"
+
+
+def test_video_edit_returns_url_and_b64():
+    fake_storage = FakeStorage()
+    app.dependency_overrides[get_video_executor] = lambda: FakeExecutor()
+    app.dependency_overrides[get_video_storage] = lambda: fake_storage
+
+    try:
+        response = client.post(
+            "/v1/videos/edits",
+            data={
+                "model": "minimax-h3-i2v",
+                "prompt": "a test video",
+                "megapixels": "0.6",
+                "duration": "5",
+            },
+            files={"image": ("input.png", b"fake-image-bytes", "image/png")},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert "created" in payload
+    assert len(payload["data"]) == 1
+
+    item = payload["data"][0]
+    assert item["url"] == "http://localhost:8000/videos/fake.mp4"
+    assert item["b64_json"] == base64.b64encode(b"fake-video-bytes").decode("ascii")
+
+
+def test_video_edit_rejects_invalid_megapixels():
+    app.dependency_overrides[get_video_executor] = lambda: FakeExecutor()
+    app.dependency_overrides[get_video_storage] = lambda: FakeStorage()
+
+    try:
+        response = client.post(
+            "/v1/videos/edits",
+            data={
+                "model": "minimax-h3-i2v",
+                "prompt": "a test video",
+                "megapixels": "3.5",
+            },
+            files={"image": ("input.png", b"fake-image-bytes", "image/png")},
         )
     finally:
         app.dependency_overrides.clear()

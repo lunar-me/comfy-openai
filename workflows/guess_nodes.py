@@ -50,6 +50,7 @@ ROLES = [
     "cfg",
     # Video-only roles (MiniMax H3 text-to-video and similar workflows).
     "resolution_selector",
+    "megapixels",
     "duration",
 ]
 
@@ -128,6 +129,11 @@ def guess_nodes(workflow: dict) -> dict:
         # aspect_ratio + megapixels and computes the target resolution.
         if "resolutionselector" in cls:
             candidates["resolution_selector"].append(node_id)
+
+        # megapixels (video): ImageScaleToTotalPixels node — takes a target
+        # megapixels value (image-to-video workflows have no aspect_ratio).
+        if "scaletototalpixels" in cls:
+            candidates["megapixels"].append(node_id)
 
         # duration (video): PrimitiveFloat titled with duration/seconds.
         if "primitivefloat" in cls and (

@@ -192,6 +192,51 @@ Request fields:
 > megapixels `0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0`. The workflow itself
 > computes the target resolution from these — the API never provides one.
 
+## Video generation example (image-to-video)
+
+`POST /v1/videos/edits` runs an image-to-video workflow (e.g. the bundled
+`minimax-h3-i2v` model) from an uploaded image plus a text prompt. It is a
+**multipart form** request, mirroring `POST /v1/images/edits`. Image-to-video
+takes a target `megapixels` value but **no `aspect_ratio`** — the workflow
+derives the resolution from the input image.
+
+```python
+import httpx
+
+response = httpx.post(
+    "http://localhost:8000/v1/videos/edits",
+    headers={"Authorization": "Bearer local-key"},
+    data={
+        "model": "minimax-h3-i2v",
+        "prompt": "The flamingo slowly turns its head toward the camera.",
+        "megapixels": "0.6",
+        "duration": "5",
+        "n": "1",
+    },
+    files={"image": ("scene.jpg", open("scene.jpg", "rb"), "image/jpeg")},
+    timeout=1800.0,
+)
+response.raise_for_status()
+video_url = response.json()["data"][0]["url"]
+```
+
+Form fields:
+
+| Field          | Type    | Default | Notes                                   |
+|----------------|---------|---------|-----------------------------------------|
+| `model`        | string  | —       | Required; a registered video model     |
+| `prompt`       | string  | —       | Required; the text description          |
+| `image`        | file    | —       | Required; the input image (multipart)   |
+| `megapixels`   | float   | `0.4`   | Target megapixels (no aspect_ratio)     |
+| `duration`     | float   | `5`     | Seconds, 1-15; also accepts `"5s"`      |
+| `n`            | int     | `1`     | Number of videos (1-4)                  |
+| `response_format` | string | `url` | `url` or `b64_json`                     |
+| `seed`         | int     | `null`  | Optional; auto-generated when omitted   |
+
+> The bundled `minimax-h3-i2v` model accepts megapixels
+> `0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 2.0`. Because image-to-video
+> has no `aspect_ratio`, that validation is skipped for this endpoint.
+
 ## How it works
 
 1. `POST /v1/images/generations` validates the request.

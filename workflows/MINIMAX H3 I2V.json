@@ -1,29 +1,38 @@
 {
-  "92": {
+  "114": {
     "inputs": {
-      "filename_prefix": "video/MiniMax_H3",
-      "format": "auto",
-      "codec": "auto",
-      "video-preview": "",
-      "video": [
-        "105:91",
+      "image": "scene 06.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "119": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 0.3,
+      "resolution_steps": 32,
+      "image": [
+        "114",
         0
       ]
     },
-    "class_type": "SaveVideo",
+    "class_type": "ImageScaleToTotalPixels",
     "_meta": {
-      "title": "Save Video"
+      "title": "Scale Image to Total Pixels"
     }
   },
-  "115": {
+  "120": {
     "inputs": {
-      "aspect_ratio": "4:3 (Standard)",
-      "megapixels": 0.4,
-      "multiple": 32
+      "image": [
+        "119",
+        0
+      ]
     },
-    "class_type": "ResolutionSelector",
+    "class_type": "GetImageSize",
     "_meta": {
-      "title": "Resolution Selector"
+      "title": "Get Image Size"
     }
   },
   "105:11": {
@@ -42,38 +51,6 @@
     "class_type": "VAELoader",
     "_meta": {
       "title": "Load VAE"
-    }
-  },
-  "105:23": {
-    "inputs": {
-      "samples": [
-        "105:14",
-        0
-      ],
-      "vae": [
-        "105:24",
-        0
-      ]
-    },
-    "class_type": "VAEDecodeAudio",
-    "_meta": {
-      "title": "VAE Decode Audio"
-    }
-  },
-  "105:10": {
-    "inputs": {
-      "samples": [
-        "105:14",
-        0
-      ],
-      "vae": [
-        "105:11",
-        0
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
     }
   },
   "105:17": {
@@ -144,16 +121,6 @@
       "title": "Basic Guider"
     }
   },
-  "105:6": {
-    "inputs": {
-      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Load Diffusion Model"
-    }
-  },
   "105:13": {
     "inputs": {
       "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
@@ -163,15 +130,6 @@
     "class_type": "CLIPLoader",
     "_meta": {
       "title": "Load CLIP"
-    }
-  },
-  "105:15": {
-    "inputs": {
-      "noise_seed": 317611573718870
-    },
-    "class_type": "RandomNoise",
-    "_meta": {
-      "title": "RandomNoise"
     }
   },
   "105:91": {
@@ -190,35 +148,6 @@
     "class_type": "CreateVideo",
     "_meta": {
       "title": "Create Video"
-    }
-  },
-  "105:104": {
-    "inputs": {
-      "prompt": "A suburban house with a swimming pool at dusk. Realistic flamingo is floating in the swimming pool.",
-      "width": [
-        "115",
-        0
-      ],
-      "height": [
-        "115",
-        1
-      ],
-      "length": [
-        "105:107",
-        1
-      ],
-      "clip": [
-        "105:13",
-        0
-      ],
-      "vae": [
-        "105:11",
-        0
-      ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "MiniMax H3 Image to Video"
     }
   },
   "105:107": {
@@ -241,6 +170,116 @@
     "class_type": "PrimitiveFloat",
     "_meta": {
       "title": "Float (duration)"
+    }
+  },
+  "105:104": {
+    "inputs": {
+      "prompt": "\n",
+      "width": [
+        "120",
+        0
+      ],
+      "height": [
+        "120",
+        1
+      ],
+      "length": [
+        "105:107",
+        1
+      ],
+      "clip": [
+        "105:13",
+        0
+      ],
+      "vae": [
+        "105:11",
+        0
+      ],
+      "first_frame": [
+        "119",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ImageToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Image to Video"
+    }
+  },
+  "105:6": {
+    "inputs": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "105:15": {
+    "inputs": {
+      "noise_seed": 924587843336325
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "105:184": {
+    "inputs": {
+      "string": "\n",
+      "find": "\"",
+      "replace": "'"
+    },
+    "class_type": "StringReplace",
+    "_meta": {
+      "title": "Remove \""
+    }
+  },
+  "105:10": {
+    "inputs": {
+      "samples": [
+        "105:14",
+        0
+      ],
+      "vae": [
+        "105:11",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "105:23": {
+    "inputs": {
+      "samples": [
+        "105:14",
+        0
+      ],
+      "vae": [
+        "105:24",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "188:186": {
+    "inputs": {
+      "filename_prefix": "video/2026-09-05/20260905105054_MiniMax_H3",
+      "format": "auto",
+      "codec": "auto",
+      "video": [
+        "105:91",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "Save Video"
     }
   }
 }

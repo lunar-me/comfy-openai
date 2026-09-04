@@ -126,6 +126,56 @@ def test_video_adapter_seed_auto_generated_when_none():
     assert isinstance(workflow["105:15"]["inputs"]["noise_seed"], int)
 
 
+# --- Image-to-video (MiniMax H3 I2V) ------------------------------------------
+
+I2V_NODE_MAP = {
+    "input_image": "114",
+    "prompt": "105:104",
+    "megapixels": "119",
+    "duration": "105:111",
+    "seed": "105:15",
+}
+
+
+def test_get_video_adapter_resolves_i2v_model():
+    adapter, meta = get_video_adapter("minimax-h3-i2v")
+    assert isinstance(adapter, VideoWorkflowAdapter)
+    assert meta["type"] == "video"
+    # Image-to-video has no aspect_ratio — only a target megapixels node.
+    assert "resolution_selector" not in meta["nodes"]
+    assert meta["nodes"]["megapixels"] == "119"
+
+
+def test_i2v_adapter_injects_image_and_megapixels():
+    adapter = VideoWorkflowAdapter("workflows/MINIMAX H3 I2V.json", I2V_NODE_MAP)
+    workflow = adapter.build(
+        prompt="a test video",
+        megapixels=0.6,
+        duration=7,
+        seed=42,
+        input_image="scene 06.jpg",
+    )
+
+    assert workflow["105:104"]["inputs"]["prompt"] == "a test video"
+    assert workflow["114"]["inputs"]["image"] == "scene 06.jpg"
+    assert workflow["119"]["inputs"]["megapixels"] == 0.6
+    assert workflow["105:111"]["inputs"]["value"] == 7
+    assert workflow["105:15"]["inputs"]["noise_seed"] == 42
+
+
+def test_i2v_adapter_skips_resolution_selector_when_absent():
+    # The I2V workflow has no ResolutionSelector node; build must not touch one.
+    adapter = VideoWorkflowAdapter("workflows/MINIMAX H3 I2V.json", I2V_NODE_MAP)
+    workflow = adapter.build(
+        prompt="x",
+        megapixels=0.4,
+        duration=5,
+        seed=1,
+        input_image="scene 06.jpg",
+    )
+    assert "115" not in workflow
+
+
 def test_validate_video_params_accepts_valid_values():
     meta = {
         "aspect_ratios": ["16:9 (Widescreen)", "4:3 (Standard)"],

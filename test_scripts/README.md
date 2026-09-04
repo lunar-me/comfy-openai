@@ -28,9 +28,10 @@ sensible defaults are used.
 |----------------|----------------------------|---------|
 | `BASE_URL`     | `http://localhost:8000/v1` | API base URL (must include `/v1`) |
 | `API_KEY`      | `local-key`                | API key (sent as Bearer token) |
-| `MODEL`        | `flux` / `flux-edit` / `minimax-h3-t2v` | Model id used by the script |
+| `MODEL`        | `flux` / `flux-edit` / `minimax-h3-t2v` / `minimax-h3-i2v` | Model id used by the script |
 | `OUTPUT_IMAGE` | `response_image`           | Base filename for saved images (02 and 03). The correct extension (`.png` / `.jpg`) is detected from the image bytes and appended automatically. |
-| `OUTPUT_VIDEO` | `response_video`           | Base filename for the saved video (04). Always saved as `.mp4`. |
+| `OUTPUT_VIDEO` | `response_video`           | Base filename for the saved video (04 and 05). Always saved as `.mp4`. |
+| `INPUT_IMAGE`  | `house_and_pool.png` (03) / `house_and_pool_and_swan.png` (05) | Input image used by the image-edit and image-to-video scripts |
 
 Copy `.env.example` to `test_scripts/.env` and edit as needed:
 
@@ -52,6 +53,7 @@ BASE_URL=http://localhost:8000/v1 MODEL=flux-edit python test_scripts/03_edit_im
 | `02_generate_image.py`  | Text-to-image generation          | `POST /v1/images/generations` |
 | `03_edit_image.py`      | Image edit (img2img)              | `POST /v1/images/edits` |
 | `04_generate_video.py`  | Text-to-video generation          | `POST /v1/videos/generations` |
+| `05_generate_video_by_image.py` | Image-to-video generation | `POST /v1/videos/edits` |
 
 ## Usage
 
@@ -68,6 +70,9 @@ python test_scripts/03_edit_image.py path/to/original.png
 # 4. Generate a video from a prompt (saves response_video.mp4)
 python test_scripts/04_generate_video.py
 
+# 5. Generate a video from an input image + prompt (saves response_video.mp4)
+python test_scripts/05_generate_video_by_image.py
+
 # 04 takes the prompt and output name from the command line too:
 #   prompt on the CLI
 python test_scripts/04_generate_video.py --prompt "A cat surfing at sunset"
@@ -75,6 +80,10 @@ python test_scripts/04_generate_video.py --prompt "A cat surfing at sunset"
 python test_scripts/04_generate_video.py --prompt-file prompt.txt
 #   custom output filename (a missing .mp4 is appended)
 python test_scripts/04_generate_video.py --prompt "A cat surfing" -o my_video.mp4
+
+# 05 takes the input image, prompt, megapixels, and duration from the CLI too:
+python test_scripts/05_generate_video_by_image.py house_and_pool_and_swan.png \
+    --prompt "The swan flies away" --megapixels 0.6 --duration 5 -o swan_fly.mp4
 ```
 
 Prompt precedence: `--prompt` (CLI) > `--prompt-file` (file contents) > the default
@@ -87,3 +96,6 @@ Scripts 02 and 03 save the generated image to the current directory using the
 base name from `OUTPUT_IMAGE` (default `response_image`). The file extension
 is detected from the image's magic bytes — `.png` for PNG, `.jpg` for JPEG —
 so the saved file is always correct regardless of what the backend returns.
+
+Scripts 04 and 05 save the generated video to the current directory using the
+base name from `OUTPUT_VIDEO` (default `response_video`), always as `.mp4`.
