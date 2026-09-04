@@ -2,30 +2,95 @@
 """Minimal test: POST /v1/images/edits — image edit (img2img).
 
 Run the API server first (python main.py), then:
-    python test_scripts/03_edit_image.py [path_to_input_image]
+    python test_scripts/03_edit_image.py [input_image] [options]
 
-Example:
+The prompt can be supplied on the command line, read from a text file, or left
+to the default test prompt. The generated image is saved as
+``response_image.png`` (override with ``-o``) in the current directory. The
+extension is detected from the returned bytes (PNG or JPEG).
+
+Examples:
+    python test_scripts/03_edit_image.py
     python test_scripts/03_edit_image.py input.png
-
-The generated image is saved as response_image.png (or .jpg, depending on the
-detected format) in the current directory.
+    python test_scripts/03_edit_image.py input.png --prompt "Add a tree"
+    python test_scripts/03_edit_image.py input.png --prompt-file prompt.txt
+    python test_scripts/03_edit_image.py input.png -o edited
 """
 
+import argparse
 import base64
 import os
-import sys
+from pathlib import Path
 
 import httpx
 
 from _env import api_base_url, load_env
+
+DEFAULT_PROMPT = "Add a realistic flamingo floating in the swimming pool"
+
+IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg")
 
 load_env()
 
 BASE_URL = api_base_url()
 API_KEY = os.environ.get("API_KEY", "local-key")
 MODEL = os.environ.get("MODEL", "flux-edit")
-INPUT_IMAGE = sys.argv[1] if len(sys.argv) > 1 else "house_and_pool.png"
-OUTPUT_IMAGE = os.environ.get("OUTPUT_IMAGE", "response_image")
+DEFAULT_INPUT_IMAGE = os.environ.get("INPUT_IMAGE", "house_and_pool.png")
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse command-line arguments: input image, prompt source, output filename."""
+    parser = argparse.ArgumentParser(
+        prog="03_edit_image.py",
+        description="Edit an existing image from a text prompt (img2img).",
+    )
+    parser.add_argument(
+        "input_image",
+        nargs="?",
+        default=DEFAULT_INPUT_IMAGE,
+        help="Path to the input image. Defaults to the INPUT_IMAGE env var or "
+        "'house_and_pool.png'.",
+    )
+    parser.add_argument(
+        "-p",
+        "--prompt",
+        help="Prompt text. If omitted and --prompt-file is not given, the "
+        "default test prompt is used.",
+    )
+    parser.add_argument(
+        "-f",
+        "--prompt-file",
+        type=Path,
+        help="Path to a text file whose trimmed contents are used as the prompt.",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        default=os.environ.get("OUTPUT_IMAGE", "response_image"),
+        help="Output image filename. Defaults to the OUTPUT_IMAGE env var or "
+        "'response_image'. The format extension (.png/.jpg) is appended after "
+        "the response format is detected; a trailing image extension is kept.",
+    )
+    return parser.parse_args(argv)
+
+
+def resolve_prompt(args: argparse.Namespace) -> str:
+    """Return the prompt from the CLI, from a file, or the default."""
+    if args.prompt is not None:
+        return args.prompt
+    if args.prompt_file is not None:
+        return args.prompt_file.read_text(encoding="utf-8").strip()
+    return DEFAULT_PROMPT
+
+
+def resolve_output(output: str) -> str:
+    """Return the base output path, dropping a trailing image extension if one
+    was supplied (the real extension is appended after the format is detected)."""
+    lower = output.lower()
+    for ext in IMAGE_EXTENSIONS:
+        if lower.endswith(ext):
+            return output[: -len(ext)]
+    return output
 
 
 def detect_extension(data: bytes) -> str:
@@ -37,8 +102,13 @@ def detect_extension(data: bytes) -> str:
     return ".png"
 
 
-def main() -> None:
-    with open(INPUT_IMAGE, "rb") as f:
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
+    prompt = resolve_prompt(args)
+    output_base = resolve_output(args.output)
+    input_image = args.input_image
+
+    with open(input_image, "rb") as f:
         image_bytes = f.read()
 
     response = httpx.post(
@@ -46,11 +116,11 @@ def main() -> None:
         headers={"Authorization": f"Bearer {API_KEY}"},
         data={
             "model": MODEL,
-            "prompt": "Add a realistic flamingo floating in the swimming pool",
+            "prompt": prompt,
             "n": 1,
         },
         files={
-            "image": (os.path.basename(INPUT_IMAGE), image_bytes, "image/png"),
+            "image": (os.path.basename(input_image), image_bytes, "image/png"),
         },
         timeout=300.0,
     )
@@ -65,7 +135,7 @@ def main() -> None:
         image_bytes = httpx.get(item["url"]).content
 
     extension = detect_extension(image_bytes)
-    out_path = f"{OUTPUT_IMAGE}{extension}"
+    out_path = f"{output_base}{extension}"
     with open(out_path, "wb") as f:
         f.write(image_bytes)
 

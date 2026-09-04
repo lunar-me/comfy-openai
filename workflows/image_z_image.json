@@ -1,0 +1,161 @@
+{
+  "94": {
+    "inputs": {
+      "aspect_ratio": "1:1 (Square)",
+      "megapixels": 2,
+      "multiple": 8
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "Resolution Selector"
+    }
+  },
+  "95": {
+    "inputs": {
+      "filename_prefix": "Z_image_base",
+      "format": "png",
+      "format.bit_depth": "8-bit",
+      "format.input_color_space": "sRGB",
+      "images": [
+        "76:65",
+        0
+      ]
+    },
+    "class_type": "SaveImageAdvanced",
+    "_meta": {
+      "title": "Save Image (Advanced)"
+    }
+  },
+  "76:67": {
+    "inputs": {
+      "text": "# Scene 07 — First Step Into the Mud\n\n**Standalone image prompt:**\nA low, close, dramatic shot of Emily Wild taking her first step into the Coldmire mud, a cold grey muddy bank that runs down toward the harbour at Castle Key on an overcast, blustery 1950s afternoon. Only her lower legs and feet are clearly in frame: her bare grimy toes curling down and pressing into the first smear of cold dark wet mud, a satisfying indentation forming around her small foot, mud starting to squelch up between her toes. The hem of her faded floral summer dress hovers just above the mud. Her posture is confident, fearless, almost joyful. In the soft-focus background behind her, the two boys hesitate on the dry ground, one protecting his fleece, the other holding a notebook. Grey clouds and a cold sea wind fill the air. Rendered as a scanned page from a mid-20th century children's book, realistic detailed gouache on cream paper, soft gouache texture, lifelike but gentle, high detail and craft. Integrated in the quiet mud-coloured negative space near the lower right, in elegant, aged classic illustrated-book typography, is the caption: \"Her bare feet met the cold mud with no fear at all.\"",
+      "clip": [
+        "76:62",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "76:68": {
+    "inputs": {
+      "width": [
+        "94",
+        0
+      ],
+      "height": [
+        "94",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "EmptySD3LatentImage"
+    }
+  },
+  "76:63": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "76:62": {
+    "inputs": {
+      "clip_name": "qwen_3_4b.safetensors",
+      "type": "lumina2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "76:65": {
+    "inputs": {
+      "samples": [
+        "76:69",
+        0
+      ],
+      "vae": [
+        "76:63",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "76:70": {
+    "inputs": {
+      "shift": 3,
+      "model": [
+        "76:66",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "76:66": {
+    "inputs": {
+      "unet_name": "ZIT\\z_image_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "76:71": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "76:62",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "76:69": {
+    "inputs": {
+      "seed": 1078155769681216,
+      "steps": 30,
+      "cfg": 4,
+      "sampler_name": "res_multistep",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "76:70",
+        0
+      ],
+      "positive": [
+        "76:67",
+        0
+      ],
+      "negative": [
+        "76:71",
+        0
+      ],
+      "latent_image": [
+        "76:68",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  }
+}

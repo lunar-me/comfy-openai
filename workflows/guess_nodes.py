@@ -174,7 +174,9 @@ def guess_nodes(workflow: dict) -> dict:
 
 def guess_type(guesses: dict) -> str:
     """Return ``"video"`` if the guesses include video-only roles, else ``"image"``."""
-    if guesses.get("resolution_selector") or guesses.get("duration"):
+#    if guesses.get("resolution_selector") or guesses.get("duration"):
+#        return "video"
+    if guesses.get("duration"):
         return "video"
     return "image"
 

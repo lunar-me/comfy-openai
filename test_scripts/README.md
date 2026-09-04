@@ -67,7 +67,19 @@ python test_scripts/03_edit_image.py path/to/original.png
 
 # 4. Generate a video from a prompt (saves response_video.mp4)
 python test_scripts/04_generate_video.py
+
+# 04 takes the prompt and output name from the command line too:
+#   prompt on the CLI
+python test_scripts/04_generate_video.py --prompt "A cat surfing at sunset"
+#   prompt read from a text file
+python test_scripts/04_generate_video.py --prompt-file prompt.txt
+#   custom output filename (a missing .mp4 is appended)
+python test_scripts/04_generate_video.py --prompt "A cat surfing" -o my_video.mp4
 ```
+
+Prompt precedence: `--prompt` (CLI) > `--prompt-file` (file contents) > the default
+test prompt. Output filename precedence: `-o/--output` > `OUTPUT_VIDEO` env var >
+`response_video` (always saved as `.mp4`).
 
 ## Output
 
