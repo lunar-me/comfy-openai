@@ -5,6 +5,7 @@
    "nodes": {
      "prompt": "76:67",
      "negative_prompt": "76:71",
+     "seed": "76:69",
      "latent": "76:68",
      "steps": "76:69",
      "cfg": "76:69",
