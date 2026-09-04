@@ -99,7 +99,7 @@ def guess_nodes(workflow: dict) -> dict:
             candidates["input_image"].append(node_id)
 
         # seed: RandomNoise or a node with noise_seed
-        if "randomnoise" in cls or "noise_seed" in inputs:
+        if "randomnoise" in cls or "noise_seed" in inputs or "seed" in inputs:
             candidates["seed"].append(node_id)
 
         # width / height: PrimitiveInt with matching title

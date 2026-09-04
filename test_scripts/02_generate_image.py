@@ -33,7 +33,7 @@ load_env()
 
 BASE_URL = api_base_url()
 API_KEY = os.environ.get("API_KEY", "local-key")
-MODEL = os.environ.get("MODEL", "flux")
+MODEL = os.environ.get("MODEL", "z-image")
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
